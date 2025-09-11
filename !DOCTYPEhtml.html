@@ -1,0 +1,2130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My Planner</title>
+  <style>
+    :root{
+      --bg:#0b0e11; --card:#12161c; --muted:#9aa4b2; --text:#e7edf5; --accent:#7aa2ff;
+      --ok:#77e0a5; --warn:#ffd36e; --bad:#ff8a8a; --line:#1b222c;
+      --radius:16px; --shadow:0 8px 30px rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{margin:0;background:linear-gradient(180deg,#0a0d10,#0d1117);color:var(--text);font:14px/1.3 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial}
+    a{color:var(--accent);text-decoration:none}
+
+    /* Layout */
+    .app{display:grid;grid-template-columns:260px 1fr;grid-template-rows:64px 1fr;grid-template-areas:"sidebar header" "sidebar main";min-height:100%}
+    header{grid-area:header;display:flex;align-items:center;justify-content:space-between;padding:12px 20px;border-bottom:1px solid var(--line);background:#0d1218;backdrop-filter:saturate(140%) blur(6px);position:sticky;top:0;z-index:20}
+    .brand{display:flex;gap:10px;align-items:center}
+    .brand .logo{width:28px;height:28px;border-radius:8px;background:conic-gradient(from 180deg at 50% 50%, #7aa2ff, #77e0a5, #ffd36e, #7aa2ff);box-shadow:inset 0 0 12px rgba(0,0,0,.3)}
+    .brand h1{font-size:16px;margin:0;font-weight:700}
+
+    .sidebar{grid-area:sidebar;border-right:1px solid var(--line);padding:18px;background:#0c1116}
+    .nav{display:flex;flex-direction:column;gap:6px}
+    .nav button{background:transparent;border:0;text-align:left;padding:10px 12px;border-radius:12px;color:var(--muted);cursor:pointer}
+    .nav button:hover,.nav button.active{background:#151a22;color:var(--text)}
+
+    main{grid-area:main;padding:18px}
+    .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+    .card h3{margin:0 0 10px;font-size:16px}
+
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+    .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;text-align:left}
+    .kpi .label{color:var(--muted);font-size:12px}
+    .kpi .value{font-size:22px;font-weight:800;margin-top:8px}
+
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 12px}
+    .btn{background:#1a2230;border:1px solid #222a36;color:#d9e2ee;padding:10px 12px;border-radius:12px;cursor:pointer}
+    .btn.primary{background:linear-gradient(180deg,#1e5bff,#1846cc);border-color:#1a4be0}
+    .btn.good{background:linear-gradient(180deg,#1c7d57,#175f43)}
+    .btn.warn{background:linear-gradient(180deg,#9a7a1c,#7a5f12)}
+    .btn:hover{filter:brightness(1.05)}
+
+    .table{width:100%;border-collapse:separate;border-spacing:0}
+    .table th,.table td{padding:10px;border-bottom:1px solid var(--line);text-align:left}
+    .table th{color:var(--muted);font-weight:600}
+    .table tr:hover td{background:#141a22}
+
+    .grid{display:grid;gap:12px}
+    .grid.two{grid-template-columns:repeat(2,1fr)}
+    .grid.three{grid-template-columns:repeat(3,1fr)}
+    .grid.four{grid-template-columns:repeat(4,1fr)}
+
+    input,select,textarea{width:100%;padding:10px;border-radius:12px;border:1px solid #273142;background:#0f1319;color:#e7edf5}
+    label{font-size:12px;color:var(--muted);margin-bottom:6px;display:block}
+    .field{display:flex;flex-direction:column;gap:6px}
+
+    .modal{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(2,6,12,.6);z-index:50}
+    .modal.open{display:flex}
+    .modal .panel{background:var(--card);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow);padding:18px;min-width:320px;max-width:720px;width:95%}
+
+    .pill{font-size:11px;padding:4px 8px;border-radius:999px;border:1px solid var(--line);display:inline-block;color:#cbd5e1}
+    .pill.high{background:rgba(255,138,138,.12);border-color:#47303d;color:#ffb6b6}
+    .pill.med{background:rgba(255,211,110,.12);border-color:#4b4128;color:#ffe3a6}
+    .pill.low{background:rgba(122,162,255,.12);border-color:#273255;color:#b8ccff}
+
+    .col{display:flex;flex-direction:column;gap:10px}
+    .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+
+    .note{color:var(--muted);font-size:12px}
+    .empty{color:#6b7889;padding:12px;border:1px dashed #2a3546;border-radius:12px;text-align:center}
+
+    .footer{margin-top:8px;display:flex;gap:8px;justify-content:flex-end}
+
+    .hidden{display:none}
+    .delta{margin-top:6px;font-size:12px}
+    .delta.up{color:#77e0a5}
+    .delta.down{color:#ff8a8a}
+    .spark svg{width:100%;height:64px;display:block}
+    /* Bigger, nicer work-mix bar */
+.mixbar{
+  display:flex;
+  height:28px;               /* was 18px */
+  border:1px solid #283446;
+  border-radius:12px;
+  overflow:hidden;
+  background:#131a23;
+  padding:3px;
+}
+.mixseg{ height:100%; }
+
+/* Grid legend */
+#mixLegend.mixlegend{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+  gap:8px 16px;
+  margin-top:8px;
+}
+#mixLegend .item{
+  display:flex; align-items:center; gap:8px;
+  font-size:13px; color:#cbd5e1;
+}
+#mixLegend .dot{ width:10px; height:10px; border-radius:3px; display:inline-block; }
+    .mixseg{height:100%}
+    .badge{display:inline-block;padding:2px 8px;border:1px solid #283446;border-radius:999px;margin:4px 6px 0 0;font-size:12px;background:#10161f}
+    .agingrow{display:flex;gap:8px}
+    .aging{flex:1;background:#131a23;border:1px solid #283446;border-radius:10px;padding:8px;text-align:center}
+    /* Clean, two-column layout for the Project Details card */
+/* Two “pairs” per row: (label,value) on the left and (label,value) on the right */
+.details-grid{
+  display:grid;
+  grid-template-columns: 220px 1fr 220px 1fr; /* left label/value + right label/value */
+  gap:8px 12px;
+  align-items:start;
+}
+.details-grid .meta-label{
+  color:var(--muted);
+  font-size:12px;
+}
+.details-grid .meta-value{
+  font-weight:600;
+  word-break:break-word;
+}
+.details-grid .desc-value{
+  white-space:pre-wrap; /* long descriptions wrap nicely */
+}
+
+/* Collapse to 1 pair per row on narrower screens */
+@media (max-width: 980px){
+  .details-grid{ grid-template-columns: 220px 1fr; }
+}
+@media (max-width: 720px){
+  .details-grid{ grid-template-columns: 1fr; }
+}
+
+.planner-grid{
+  display:grid;
+  grid-template-columns: 90px repeat(5, 1fr); /* time column + Mon–Fri */
+  gap:12px;
+}
+
+.timecell{
+  font-size:12px;
+  color:var(--muted);
+  border-top:1px dashed #283446;
+  padding-top:4px;
+}
+.timecell:first-child{ border-top:none; }
+
+
+/* the slot grid the events sit on */
+.daygrid{
+  position:relative;              /* so absolute event blocks anchor here */
+  display:grid;
+  grid-template-rows: repeat(18, var(--slot-h));
+  border-radius:10px;
+  overflow:hidden;
+  background:#0f1319;
+  border:1px dashed #283446;
+}
+
+/* faint lines for each half hour */
+.daygrid .slot{
+  border-top:1px dashed #283446;
+}
+.daygrid .slot:first-child{ border-top:none; }
+
+/* clickable area */
+.daygrid .slot:hover{
+  background:#111724;
+  cursor:pointer;
+}
+
+/* event block rendered on top of the grid */
+.event-block{
+  position:absolute;
+  left:8px; right:8px;
+  background:#131a23;
+  border:1px solid #3b485c;
+  border-radius:10px;
+  padding:6px 8px;
+  box-shadow:0 4px 16px rgba(0,0,0,.35);
+}
+.event-block small{ color:#9fb0c3; }
+.event-actions{
+  position:absolute; right:6px; bottom:6px; display:flex; gap:6px;
+}
+
+/* === Compact planner event blocks === */
+.event-block{
+  padding: 6px 8px 8px 8px;   /* a little tighter */
+}
+.event-actions{
+  position:absolute;
+  right:6px;
+  bottom:6px;   /* anchor to bottom */
+  top:auto;     /* make sure top positioning is disabled */
+  display:flex;
+  gap:6px;
+}
+.btn.icon{                    /* small round icon buttons */
+  padding:2px 6px;
+  border-radius:8px;
+  font-size:12px;
+  line-height:1;
+}
+.event-title{
+  font-weight:700;
+  margin-right:0;
+}
+.event-task{
+  font-size:12px;
+  color:var(--muted);
+}
+.one-line{
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;     /* truncate long titles nicely */
+}
+:root{
+  --slot-h: 40px;
+  --head-h: 20px;   /* header height */
+  --day-pad: 8px;   /* .daycol top padding */
+}
+
+/* Left time column */
+.timecol{
+  display:grid;
+  grid-template-rows: repeat(18, var(--slot-h));
+  align-items:start;
+  margin-top: calc(var(--head-h) + var(--day-pad)); /* <-- include padding */
+}
+
+/* Each day column */
+.daycol{
+  background:var(--card);
+  border:1px solid #283446;
+  border-radius:14px;
+  padding: var(--day-pad);
+}
+
+/* Day header row */
+.dayhead{
+  font-size:12px;
+  color:var(--muted);
+  height: var(--head-h);
+  margin: 0;                    /* no bottom margin */
+  display:flex;
+  align-items:center;
+  padding-left:4px;
+}
+
+@media (min-width: 1100px){
+  #view-dashboard .cards{
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+/* Inbox To-Dos */
+.todo-card h3{ margin:0 0 10px }
+.todo-input{
+  width:100%; padding:12px 14px; border-radius:12px;
+  border:1px solid #283446; background:#10161f; color:var(--text);
+}
+.todo-list{             /* remove bullets and left-indent */
+  list-style:none; margin:10px 0 0; padding:0;
+  display:flex; flex-direction:column; gap:10px;
+}
+.todo-row{
+  display:grid; grid-template-columns: 20px 1fr auto;  /* ⬅️ checkbox | text | delete */
+  align-items:center; gap:12px;
+  padding:12px 14px; background:#0f1319;
+  border:1px solid #283446; border-radius:12px;
+}
+.todo-main{ display:flex; flex-direction:column; align-items:flex-start }
+.todo-title{ font-weight:600 }
+.todo-meta{ font-size:12px; color:var(--muted); margin-top:2px }
+  </style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand" style="margin-bottom:14px">
+      <div class="logo"></div>
+      <div>
+        <div style="font-weight:800">My Planner</div>
+        <div style="color:var(--muted);font-size:12px">MVP UI</div>
+      </div>
+    </div>
+    <div class="nav">
+      <button data-view="dashboard" class="active">🏠 Dashboard</button>
+      <button data-view="projects">📁 Projects</button>
+      <button data-view="planner">🗓️ Planner</button>
+      <button data-view="events">⏱️ Log</button>
+      <button data-view="settings">⚙️ Settings</button>
+    </div>
+  </aside>
+
+  <header>
+    <div class="brand">
+      <div class="logo"></div>
+      <h1 id="viewTitle">Dashboard</h1>
+    </div>
+    <div class="row">
+      <button class="btn" id="backupBtn">Export Data</button>
+      <label class="btn" for="restoreFile" style="cursor:pointer">Import Data</label>
+      <input id="restoreFile" type="file" accept="application/json" class="hidden" />
+    </div>
+  </header>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="view-dashboard">
+      <div class="kpis">
+        <div class="kpi">
+          <div class="label">Completed (last 4 wks)</div>
+          <div class="value" id="kpi-completed">0</div>
+          <div class="delta" id="delta-completed"></div>
+        </div>
+        <div class="kpi">
+          <div class="label">Median task cycle time</div>
+          <div class="value" id="kpi-cycle">0d</div>
+          <div class="delta" id="delta-cycle"></div>
+        </div>
+        <div class="kpi">
+          <div class="label">Deep-work ratio (this week)</div>
+          <div class="value" id="kpi-deepratio">0%</div>
+          <div class="delta" id="delta-deep"></div>
+        </div>
+        <div class="kpi">
+          <div class="label">Open WIP</div>
+          <div class="value" id="kpi-wip">0</div>
+          <div class="delta" id="delta-wip"></div>
+        </div>
+      </div>
+    
+      <div class="cards" id="dashCards" style="margin-top:16px">
+        <!-- 4 cards @ 50% each -->
+        <div class="card">
+          <h3>Current Step by Project</h3>
+          <div id="currentSteps" class="col"></div>
+        </div>
+      
+        <div class="card">
+          <h3>Work mix (this week)</h3>
+          <div id="mixBar" class="mixbar"></div>
+          <div id="mixLegend" class="note"></div>
+        </div>
+      
+        <div class="card">
+          <h3>Work In Progress Aging</h3>
+          <div id="agingBars"></div>
+          <div id="oldestList" class="note"></div>
+        </div>
+      
+        <div class="card">
+          <h3>Schedule Capacity</h3>
+          <div id="riskFlags" class="note">No signals</div>
+        </div>
+      
+        <!-- Full-width Inbox To-Dos (spans both columns) -->
+        <div class="card" id="todoCard">
+          <h3>Things To Remember</h3>
+          <input id="todoInput" class="todo-input" placeholder="Type a reminder and press Enter…"/>
+          <div id="todoList" class="todo-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- PROJECTS -->
+    <section id="view-projects" class="hidden">
+      <div class="toolbar">
+        <button class="btn primary" id="newProjectBtn">+ New Project</button>
+        <input id="projectSearch" placeholder="Search… (title, customer, id)" />
+        <select id="filterType"><option value="">All Types</option></select>
+        <select id="filterStage"><option value="">All Stages</option></select>
+        <select id="filterStatus">
+          <option value="active" selected>Active only</option>
+          <option value="all">All statuses</option>
+          <option value="completed">Completed only</option>
+          <option value="cancelled">Cancelled only</option>
+        </select>
+      </div>
+      <div id="projectList" class="cards"></div>
+      <div class="empty" id="projectEmpty">No projects yet. Click “New Project”.</div>
+    </section>
+
+    <!-- PLANNER -->
+    <section id="view-planner" class="hidden">
+      <div class="toolbar">
+        <button class="btn primary" id="newEventBtn">+ Add Time Block</button>
+        <input type="date" id="weekStart" />
+        <div class="note">Pick a Monday. Blocks shown Mon–Fri.</div>
+      </div>
+      <div class="planner-grid" id="cal"></div>
+    </section>
+
+    <!-- EVENTS (LOG) -->
+    <section id="view-events" class="hidden">
+      <div class="toolbar">
+        <button class="btn" id="newEventBtn2">+ Add Time Block</button>
+        <input placeholder="Search… (project, task, note)" id="eventSearch" />
+      </div>
+      <div class="card">
+        <table class="table" id="eventsTable">
+          <thead>
+            <tr><th>Start</th><th>End</th><th>Hours</th><th>Project</th><th>Task</th><th>Category</th><th>Notes</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- PROJECT OVERVIEW (full page) -->
+<section id="view-project" class="hidden">
+  <div class="toolbar">
+    <button class="btn" onclick="showView('projects')">← Back</button>
+    <button class="btn" id="projPrintBtn">🖨️ Print</button>
+    <button class="btn" id="projEditBtn">✏️ Edit</button>
+    <button class="btn primary" id="projAddTaskBtn">+ New Task</button>
+  </div>
+
+  <div id="projHeader" class="kpis" style="margin-bottom:14px"></div>
+
+  <div class="card">
+    <h3>Details</h3>
+    <div id="projDetails" class="details-grid"></div>
+  </div>
+
+<!-- REQUIREMENTS (full width) -->
+<div class="card" id="reqCard" style="margin-top:14px">
+  <h3>Requirements</h3>
+  <div id="projReqSummary" class="col"></div>
+  <div class="footer">
+    <button class="btn" id="editReqBtn">✏️ Edit Requirements</button>
+  </div>
+</div>
+
+<div class="modal" id="reqModal">
+  <div class="panel">
+    <h3>Project Requirements</h3>
+    <div class="note" id="reqTypeNote" style="margin-bottom:8px"></div>
+    <div id="reqForm" class="grid two"></div>
+    <div class="footer">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="saveReqBtn">Save</button>
+    </div>
+  </div>
+</div>
+
+  <div class="grid two" style="margin-top:14px">
+    <div class="card">
+      <h3>Tasks</h3>
+      <table class="table">
+        <thead><tr><th>Task</th><th>Status</th><th>Done</th><th></th></tr></thead>
+        <tbody id="projTasks"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h3>Upcoming Schedule (next 14 days)</h3>
+      <table class="table">
+        <thead><tr><th>Start</th><th>End</th><th>Hours</th><th>Task</th><th>Category</th></tr></thead>
+        <tbody id="projUpcoming"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="grid two" style="margin-top:14px">
+    <div class="card">
+      <h3>Recent Activity</h3>
+      <div id="projActivity"></div>
+    </div>
+    <div class="card">
+      <h3>Notes / Next Steps</h3>
+      <div class="field"><textarea id="projNextSteps" rows="10" placeholder="Key decisions, blockers, next actions..."></textarea></div>
+      <div class="footer"><button class="btn primary" id="saveNextSteps">Save Notes</button></div>
+    </div>
+  </div>
+</section>
+
+    <!-- SETTINGS -->
+    <section id="view-settings" class="hidden">
+      <div class="grid two">
+        <div class="card">
+          <h3>Lookups</h3>
+          <div class="grid two">
+            <div class="field"><label>Project Types (comma-separated)</label><textarea id="lkProjectTypes" rows="3"></textarea></div>
+            <div class="field"><label>Stages (comma-separated)</label><textarea id="lkStages" rows="3"></textarea></div>
+            <div class="field"><label>Priorities (comma-separated)</label><textarea id="lkPriorities" rows="3"></textarea></div>
+            <div class="field"><label>Statuses (comma-separated)</label><textarea id="lkStatuses" rows="3"></textarea></div>
+            <div class="field"><label>Service Lines (comma-separated)</label><textarea id="lkServiceLines" rows="3"></textarea></div>
+          </div>
+          <div class="footer"><button class="btn primary" id="saveLookups">Save</button></div>
+        </div>
+        <div class="card">
+          <h3>Default Tasks by Project Type</h3>
+          <div class="note" style="margin-bottom:8px">When you create a new project, you can auto-add a suggested task list.</div>
+          <div class="field"><label>JSON editor</label><textarea id="defaultsJson" rows="14"></textarea></div>
+          <div class="footer"><button class="btn primary" id="saveDefaults">Save Defaults</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- MODALS -->
+<div class="modal" id="projectModal">
+  <div class="panel">
+    <h3 id="prjModalTitle">New Project</h3>
+    <div class="grid two">
+      <div class="field"><label>Title</label><input id="prjTitle"/></div>
+      <div class="field"><label>Type</label><select id="prjType"></select></div>
+      <div class="field"><label>Customer</label><input id="prjCustomer"/></div>
+      <div class="field"><label>Service Line</label><select id="prjServiceLine"></select></div>
+      <div class="field"><label>Priority</label><select id="prjPriority"></select></div>
+      <div class="field"><label>Stage</label><select id="prjStage"></select></div>
+      <div class="field"><label>Status</label><select id="prjStatus"></select></div>
+      <div class="field"><label>Due Date</label><input type="date" id="prjDue"/></div>
+      <div class="field"><label>Assigned Date</label><input type="date" id="prjAssigned"/></div>
+      <div class="field"><label>External ID (e.g., ServiceNow #)</label><input id="prjExt"/></div>
+      <div class="field" style="grid-column:span 2"><label>Description</label><textarea id="prjDesc" rows="3"></textarea></div>
+    </div>
+    <div class="footer">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="saveProject">Save</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="taskModal">
+  <div class="panel">
+    <h3>New Task</h3>
+    <div class="grid two">
+      <div class="field"><label>Project</label><select id="taskProject"></select></div>
+      <div class="field"><label>Title</label><input id="taskTitle"/></div>
+      <div class="field"><label>Status</label><select id="taskStatus"></select></div>
+      <div class="field"><label>Position in sequence</label><select id="taskPos"></select></div>
+      <div class="field" style="grid-column:span 2"><label>Notes</label><textarea id="taskNotes" rows="3"></textarea></div>
+    </div>
+    <div class="footer">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="saveTask">Save Task</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="eventModal">
+  <div class="panel">
+    <h3>New Time Block</h3>
+    <div class="row" style="margin:0 0 8px">
+      <button class="btn" id="qpToggle">+ New quick project</button>
+    </div>
+    
+    <div class="grid two hidden" id="evQuickProject">
+      <div class="field">
+        <label>Quick project type</label>
+        <select id="qpType">
+          <option value="">—</option>
+          <option>Meeting</option>
+          <option>Peer Assistance</option>
+          <option>Peer Testing</option>
+        </select>
+      </div>
+      <div class="field"><label>Project title</label><input id="qpTitle" placeholder="e.g., Meeting with …"/></div>
+      <div class="field"><label>Customer (optional)</label><input id="qpCustomer"/></div>
+      <div class="field"><label>Single task title</label><input id="qpTask" placeholder="e.g., Meeting"/></div>
+    </div>
+    <div class="grid two">
+      <div class="field"><label>Project</label><select id="evProject"></select></div>
+      <div class="field"><label>Task (optional)</label><select id="evTask"><option value="">—</option></select></div>
+      <div class="field"><label>Category</label>
+        <select id="evCat">
+          <option>Deep Work</option>
+          <option>Meeting</option>
+          <option>Assist</option>
+          <option>Admin</option>
+          <option>Training</option>
+        </select>
+      </div>
+      <div class="field"><label>Start</label><input type="datetime-local" id="evStart"/></div>
+      <div class="field"><label>End</label><input type="datetime-local" id="evEnd"/></div>
+      <div class="field" style="grid-column:span 2"><label>Notes</label><textarea id="evNotes" rows="3"></textarea></div>
+    </div>
+    <div class="footer">
+      <button class="btn" data-close>Cancel</button>
+      <button class="btn primary" id="saveEvent">Save Block</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// --------- Simple Store (localStorage) ---------
+const LS_KEY = 'workTrackerDBv1';
+const iso = d => new Date(d).toISOString();
+const fmtDate = d => new Date(d).toLocaleString();
+// Parse "YYYY-MM-DD" as a local date (not UTC)
+const parseLocalDate = (s) => {
+  if (!s) return new Date();
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
+};
+// Safer date -> input value (no timezone surprises)
+const dateInput = d => [
+  d.getFullYear(),
+  String(d.getMonth()+1).padStart(2,'0'),
+  String(d.getDate()).padStart(2,'0')
+].join('-');
+const mondayOf = date => {
+  const d = new Date(date); const day = (d.getDay()+6)%7; d.setDate(d.getDate()-day); d.setHours(0,0,0,0); return d;
+};
+const addHours = (d,h)=>{const dt=new Date(d); dt.setHours(dt.getHours()+h); return dt};
+
+// ---- Planner grid window (7:30 → 16:30) ----
+const DAY_START_MIN = 7*60 + 30;   // 07:30
+const DAY_END_MIN   = 16*60 + 30;  // 16:30
+const SLOT_MIN      = 30;          // 30-minute slots
+const NUM_SLOTS     = (DAY_END_MIN - DAY_START_MIN) / SLOT_MIN; // 18
+
+// Open the Event modal prefilled at a given local time
+function slotNewEvent(y, m, d, hh, mm, durationMin = 60){
+  openEventModal();                       // open empty modal
+  const start = new Date(y, m, d, hh, mm);
+  const end   = new Date(start); end.setMinutes(end.getMinutes()+durationMin);
+  $('#evStart').value = dtInput(start);   // prefill
+  $('#evEnd').value   = dtInput(end);
+}
+
+const defaultState = () => ({
+  counters:{project:1, task:1, event:1, todo:1},
+  lookups:{
+    projectTypes:["Ad-Hoc SQL","Tableau","Reporting Workbench","Radar Dashboard","Peer Assistance","Peer Testing","Personal Development - Training","Meeting","Other"],
+    stages:["Intake","Requirements","Build","Validate","Change Management","Customer Approval","Complete"],
+    priorities:["High","Normal","Low"],
+    statuses:["Not Started","In Progress","Waiting/Blocked","Complete","Cancelled"],
+    serviceLines:["Womens Health","Pediatrics","Surgery","Nursing","Musculoskeletal","Cardiology","Anesthesia","IT/Analytics","Other"]
+  },
+  defaults:{
+    "Ad-Hoc SQL":[
+      {title:"Shared folder & Requirements Doc", hours:0.5},
+      {title:"Initial Customer Meeting", hours:0.5},
+      {title:"Write Query", hours:2.0},
+      {title:"Review Output Meeting", hours:0.5},
+      {title:"Review Requ Doc & Close Ticket", hours:0.5}
+    ],
+    "Tableau":[
+      {title:"Shared folder & Requirements Doc", hours:0.5},
+      {title:"Initial Customer Meeting", hours:0.5},
+      {title:"Write/Edit Query", hours:2.0},
+      {title:"Develop Dashboard", hours:3.0},
+      {title:"Review Dashboard Meeting", hours:1.0},
+      {title:"Change Management", hours:1.0},
+      {title:"Review Requ Doc & Close Ticket", hours:0.5}
+    ],
+    "Reporting Workbench":[
+      {title:"Shared folder & Requirements Doc", hours:0.5},
+      {title:"Initial Customer Meeting", hours:0.5},
+      {title:"RWB Development", hours:1.5},
+      {title:"Review RWB Meeting", hours:0.5},
+      {title:"Change Management", hours:0.5},
+      {title:"Review Requ Doc & Close Ticket", hours:0.5}
+    ],
+    "Radar Dashboard":[
+      {title:"Shared folder & Requirements Doc", hours:0.5},
+      {title:"Initial Customer Meeting", hours:0.5},
+      {title:"Define metrics & layout", hours:1.0},
+      {title:"Build components & test", hours:2.5},
+      {title:"Review Radar Dashboard Meeting", hours:1.0},
+      {title:"Review Requ Doc & Close Ticket", hours:0.5}
+    ],
+    "Peer Testing":[{title:"Review stored procedure and/or Tableau workbook", hours:1.0}],
+    "Peer Assistance":[{title:"Meet with coworker", hours:0.5}],
+    "Meeting":[{title:"Meeting", hours:0.5}]
+  },
+  projects:[], tasks:[], events:[], todos:[]
+});
+
+const REAL_TYPES = ['Ad-Hoc SQL','Tableau','Reporting Workbench','Radar Dashboard','Other'];
+const REAL_TYPES_SET = new Set(REAL_TYPES);
+const REAL_TYPES_VALUE = '__real';
+
+let DB = load();
+if (!DB.lookups.serviceLines) {
+  DB.lookups.serviceLines = ["Womens Health","Pediatrics","Surgery","Nursing","Musculoskeletal","Cardiology","Anesthesia","IT/Analytics","Other"];
+  save();
+}
+if (!DB.todos) { DB.todos = []; save(); }
+if (!DB.counters.todo) { DB.counters.todo = 1; save(); }
+
+// One-time gentle backfill for old tasks (best-effort)
+DB.tasks.forEach(t=>{
+  if (!t.createdAt) {
+    const firstEvt = DB.events.filter(e=>e.taskId===t.id).sort((a,b)=> new Date(a.start)-new Date(b.start))[0];
+    t.createdAt = (firstEvt?.start) || (t.completedDate ? new Date(t.completedDate).toISOString() : new Date().toISOString());
+  }
+});
+save();
+
+
+function load(){
+  try { return JSON.parse(localStorage.getItem(LS_KEY)) || defaultState(); } catch { return defaultState(); }
+}
+function save(){ localStorage.setItem(LS_KEY, JSON.stringify(DB)); }
+function nextId(prefix, key){ const n = (DB.counters[key]++); save(); return `${prefix}-${String(n).padStart(4,'0')}`; }
+
+// --------- DOM helpers ---------
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+function setOptions(select, arr){ select.innerHTML = arr.map(v=>`<option>${escapeHtml(v)}</option>`).join(''); }
+function escapeHtml(s){ return (s||'').toString().replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c])); }
+
+// --------- Navigation ---------
+const views = ['dashboard','projects','planner','events','settings','project'];
+$$('.nav button').forEach(b=>b.addEventListener('click',()=>showView(b.dataset.view,b)));
+function showView(v, btn){
+  views.forEach(id=>{
+    const sec = document.querySelector(`#view-${id}`);
+    if(!sec) return;
+    id===v ? sec.classList.remove('hidden') : sec.classList.add('hidden');
+  });
+  document.querySelector('#viewTitle').textContent = v.charAt(0).toUpperCase()+v.slice(1);
+  document.querySelectorAll('.nav button').forEach(x=>x.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+
+  if(v==='dashboard') renderDashboard();
+  if(v==='projects') renderProjects();
+  if(v==='planner') {
+    const mon = mondayOf(new Date());
+   const input = $('#weekStart');
+    if (input) input.value = dateInput(mon);  // snap to this week's Monday
+    renderPlanner();
+  }
+  if(v==='events') renderEvents();
+  if(v==='settings') renderSettings();
+  if(v==='project')  renderProjectOverview();
+}
+// ----- Task ordering helpers -----
+const seqSort = (a,b) =>
+  ((a.seq ?? Infinity) - (b.seq ?? Infinity)) ||
+  (new Date(a.createdAt || 0) - new Date(b.createdAt || 0)) ||
+  (DB.tasks.indexOf(a) - DB.tasks.indexOf(b));
+
+const projectTasks = pid => DB.tasks.filter(t => t.projectId === pid);
+
+function nextSeq(pid){
+  const ts = projectTasks(pid);
+  const max = ts.reduce((m,t)=> Math.max(m, Number.isFinite(t.seq) ? t.seq : 0), 0);
+  return max + 1;
+}
+
+function normalizeSeq(pid){
+  const ts = projectTasks(pid).sort(seqSort);
+  ts.forEach((t,i)=> t.seq = i+1);
+}
+
+function insertTaskAt(pid, taskObj, pos /* 1..N+1 */){
+  // Start with all tasks for the project, ordered, but *exclude* the new one
+  const ts = projectTasks(pid).sort(seqSort).filter(x => x !== taskObj);
+
+  const N = ts.length;
+  const p = Math.max(1, Math.min(pos || (N+1), N+1));
+
+  ts.splice(p-1, 0, taskObj);     // insert once at desired spot
+  ts.forEach((t,i)=> t.seq = i+1); // renumber 1..N
+}
+
+// --- Backfill task.seq per project once (idempotent) ---
+(function backfillTaskSeq(){
+  DB.projects.forEach(p => normalizeSeq(p.id));
+  save();
+})();
+
+// --------- Dashboard ---------
+function renderDashboard(){
+  // ------- helpers -------
+  const DAY = 86400000;
+  const startOfWeek = d => mondayOf(d);
+  const hours = e => (new Date(e.end)-new Date(e.start))/36e5;
+  const sum = a => a.reduce((x,y)=>x+y,0);
+  const pct = (num,den)=> den? Math.round((num/den)*100):0;
+  const median = arr => {
+    if(!arr.length) return 0;
+    const s = arr.slice().sort((a,b)=>a-b), m = Math.floor(s.length/2);
+    return s.length%2 ? s[m] : (s[m-1]+s[m])/2;
+  };
+  const deltaPct = (nowVal, prevVal, invert=false)=>{
+    if(prevVal===0 && nowVal===0) return {cls:'', text:''};
+    if(prevVal===0) return {cls:'up', text:'+100% vs prev'};
+    const ch = ((nowVal - prevVal)/prevVal)*100;
+    const up = invert ? ch<0 : ch>0;
+    return {cls: up?'up':'down', text: `${ch>0?'+':''}${Math.round(ch)}% vs prev`};
+  };
+
+  // ------- ranges -------
+  const now = new Date();
+  const wkStart = startOfWeek(new Date());
+  const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate()+7);
+  const fourWStart = new Date(now - 27*DAY);
+  const prev4Start = new Date(now - 55*DAY); // days 28–55 ago
+  const prev4End   = new Date(now - 28*DAY);
+  const last7 = new Date(now - 7*DAY);
+  const next7 = new Date(now.getTime() + 7*DAY);
+
+  // ------- events in week -------
+  const evThisWeek = DB.events.filter(e => {
+    const s = new Date(e.start);
+    return s>=wkStart && s<wkEnd;
+  });
+  const hrsWeek = sum(evThisWeek.map(hours));
+  const deepHrs = sum(evThisWeek.filter(e=>e.category==='Deep Work').map(hours));
+  const meetingHrs  = sum(evThisWeek.filter(e=>e.category==='Meeting').map(hours));
+  const assistHrs   = sum(evThisWeek.filter(e=>e.category==='Assist').map(hours));
+  const adminHrs    = sum(evThisWeek.filter(e=>e.category==='Admin').map(hours));
+  const trainingHrs = sum(evThisWeek.filter(e=>e.category==='Training').map(hours));
+  
+  // ------- completions / cycle time -------
+  const tasksCompleted4w = DB.tasks.filter(t=> t.completedDate && new Date(t.completedDate)>=fourWStart);
+  const tasksCompletedPrev4 = DB.tasks.filter(t=> t.completedDate && new Date(t.completedDate)>=prev4Start && new Date(t.completedDate)<prev4End);
+  const completedCount = tasksCompleted4w.length;
+  const completedPrev  = tasksCompletedPrev4.length;
+
+  // cycle time = first event on task -> completed
+  const cycleDays = tasksCompleted4w.map(t=>{
+    const ev = DB.events.filter(e=>e.taskId===t.id).sort((a,b)=> new Date(a.start)-new Date(b.start))[0];
+    if(!ev) return null;
+    return (new Date(t.completedDate) - new Date(ev.start))/DAY;
+  }).filter(x=>x!==null && x>=0);
+  const medianCycle = cycleDays.length ? median(cycleDays) : 0;
+
+  const cyclePrev = tasksCompletedPrev4.map(t=>{
+    const ev = DB.events.filter(e=>e.taskId===t.id).sort((a,b)=> new Date(a.start)-new Date(b.start))[0];
+    if(!ev) return null;
+    return (new Date(t.completedDate) - new Date(ev.start))/DAY;
+  }).filter(x=>x!==null && x>=0);
+  const medianCyclePrev = cyclePrev.length ? median(cyclePrev) : 0;
+
+  // ------- sequential pipeline metrics -------
+  const activeProjects = DB.projects.filter(p=> p.status!=='Complete' && p.status!=='Cancelled');
+  const earliestOpenTask = (pid)=>{
+  const open = DB.tasks.filter(t=> t.projectId===pid && t.status!=='Complete' && t.status!=='Cancelled');
+  if(!open.length) return null;
+  open.sort(seqSort);
+  return open[0];
+};
+
+  // Next-step coverage = % of active projects whose earliest open task has a session scheduled in next 7d
+  const coverageNowCount = activeProjects.filter(p=>{
+    const t = earliestOpenTask(p.id); if(!t) return false;
+    return DB.events.some(e=> e.taskId===t.id && new Date(e.start)>=now && new Date(e.start)<next7);
+  }).length;
+  const coverageNow = activeProjects.length ? Math.round((coverageNowCount/activeProjects.length)*100) : 0;
+
+  // Last week coverage (same logic but for the previous 7d window)
+  const prevStart = new Date(wkStart - 7*DAY), prevEnd = wkStart;
+  const coveragePrevCount = activeProjects.filter(p=>{
+    const t = earliestOpenTask(p.id); if(!t) return false;
+    return DB.events.some(e=> e.taskId===t.id && new Date(e.start)>=prevStart && new Date(e.start)<prevEnd);
+  }).length;
+  const coveragePrev = activeProjects.length ? Math.round((coveragePrevCount/activeProjects.length)*100) : 0;
+
+  // Stuck in current step: earliest open task has no session next 7d AND no work in last 7d
+  const stuckProjects = activeProjects.filter(p=>{
+    const t = earliestOpenTask(p.id); if(!t) return false;
+    const lastWork = DB.events.filter(e=> e.taskId===t.id).sort((a,b)=> new Date(a.start)-new Date(b.start)).slice(-1)[0];
+    const upcoming = DB.events.some(e=> e.taskId===t.id && new Date(e.start)>=now && new Date(e.start)<next7);
+    const noRecentWork = !lastWork || new Date(lastWork.start) < last7;
+    return (!upcoming) && noRecentWork;
+  });
+
+  // Next actions (7d): earliest open task sessions, soonest first
+  const nextActions = [];
+  activeProjects.forEach(p=>{
+    const t = earliestOpenTask(p.id); if(!t) return;
+    DB.events
+      .filter(e=> e.taskId===t.id && new Date(e.start)>=now && new Date(e.start)<next7)
+      .forEach(e=> nextActions.push({p,t,e}));
+  });
+  nextActions.sort((a,b)=> new Date(a.e.start) - new Date(b.e.start));
+
+  // ------- trends: completed per week (last 8) -------
+  const weeks = [...Array(8)].map((_,i)=>{
+    const end = new Date(startOfWeek(new Date(now - i*7*DAY)));
+    const start = new Date(end - 7*DAY);
+    return {start, end};
+  }).reverse();
+  const completedByWeek = weeks.map(w=>{
+    return DB.tasks.filter(t=>{
+      if(!t.completedDate) return false;
+      const d = new Date(t.completedDate);
+      return d>=w.start && d<w.end;
+    }).length;
+  });
+
+  // ------- deep ratio / collaboration / coverage for info tiles -------
+  const deepRatio = hrsWeek ? deepHrs/hrsWeek : 0;
+  const deepRatioPrev = (()=>{ // last week
+    const lastWStart = new Date(wkStart - 7*DAY), lastWEnd = wkStart;
+    const ev = DB.events.filter(e=> {
+      const s = new Date(e.start);
+      return s>=lastWStart && s<lastWEnd;
+    });
+    const h = sum(ev.map(hours));
+    const dh = sum(ev.filter(e=>e.category==='Deep Work').map(hours));
+    return h ? dh/h : 0;
+  })();
+  const collabLoad = hrsWeek ? ((meetingHrs + assistHrs) / hrsWeek) : 0;
+
+  // ------- focus/consistency (unchanged) -------
+  const last10d = [...Array(10)].map((_,i)=> new Date(now - i*DAY)).reverse();
+  const projectsPerDay = last10d.map(d=>{
+    const s = new Date(d); s.setHours(0,0,0,0);
+    const e = new Date(s); e.setDate(s.getDate()+1);
+    const ids = new Set(DB.events.filter(ev=> (new Date(ev.start)>=s && new Date(ev.start)<e)).map(ev=>ev.projectId).filter(Boolean));
+    return ids.size;
+  }).filter(n=>n>0);
+  const medianProjPerDay = projectsPerDay.length ? median(projectsPerDay) : 0;
+
+  // ------- risk flags (add stuck items) -------
+  const risk = [];
+  // generic inactivity / load risk
+  DB.projects.forEach(p=>{
+    if(p.status==='Complete' || p.status==='Cancelled') return;
+    const pEvents = DB.events.filter(e=>e.projectId===p.id);
+    const lastTouch = pEvents.length ? new Date(pEvents.map(e=>e.start).sort().slice(-1)[0]) : null;
+    if(!lastTouch || lastTouch < last7) risk.push(`🧊 ${escapeHtml(p.title)} — no activity in 7d`);
+    const ptasks = DB.tasks.filter(t=>t.projectId===p.id);
+    const done = ptasks.filter(t=>t.status==='Complete').length;
+    const pctDone = ptasks.length? done/ptasks.length : 0;
+    if(pctDone < 0.7 && (ptasks.length-done)>=3) risk.push(`⚠️ ${escapeHtml(p.title)} — ${ptasks.length-done} open / ${ptasks.length} total`);
+  });
+  // sequential stuck risk
+  stuckProjects.forEach(p=>{
+    risk.push(`🚧 ${escapeHtml(p.title)} — current step has no plan (7d) & no recent work`);
+  });
+
+  // ------- write KPI tiles -------
+  // We’ll keep tiles 1–3 as-is; tile 4 becomes Next-step coverage (7d)
+  document.querySelector('#view-dashboard .kpi:nth-child(4) .label').textContent = 'Next-step coverage (7d)';
+
+  // Total Projects (active, major types only)
+const MAJOR_TYPES = new Set(['Ad-Hoc SQL','Tableau','Reporting Workbench','Radar Dashboard','Reporting Workbench']);
+const totalActiveMajor = DB.projects.filter(p =>
+  MAJOR_TYPES.has(p.type) && p.status !== 'Complete' && p.status !== 'Cancelled'
+).length;
+
+// Update KPI #1 tile
+document.querySelector('#view-dashboard .kpi:nth-child(1) .label').textContent = 'Total Active Projects';
+$('#kpi-completed').textContent = totalActiveMajor;
+
+// Hide the old delta row for this tile
+const dc = $('#delta-completed');
+if (dc) { dc.textContent = ''; dc.style.display = 'none'; }
+
+  // KPI #2: Context switches / day (10-day median)
+document.querySelector('#view-dashboard .kpi:nth-child(2) .label').textContent =
+  'Context switches / day (10-day median)';
+
+// Previous 10-day window for delta comparison
+const prev10d = [...Array(10)].map((_, i) => new Date(now - (i + 10) * DAY)).reverse();
+const projectsPerDayPrev = prev10d.map(d => {
+  const s = new Date(d); s.setHours(0,0,0,0);
+  const e = new Date(s); e.setDate(s.getDate()+1);
+  const ids = new Set(
+    DB.events
+      .filter(ev => new Date(ev.start) >= s && new Date(ev.start) < e)
+      .map(ev => ev.projectId)
+      .filter(Boolean)
+  );
+  return ids.size;
+}).filter(n => n > 0);
+const medianProjPerDayPrev = projectsPerDayPrev.length ? median(projectsPerDayPrev) : 0;
+
+// Show the metric (lower is better)
+$('#kpi-cycle').textContent = (medianProjPerDay || 0).toFixed(1);
+const dSwitch = deltaPct(medianProjPerDay || 0, medianProjPerDayPrev || 0, /*invert=*/true);
+$('#delta-cycle').className = 'delta ' + (dSwitch.cls || '');
+$('#delta-cycle').innerHTML = dSwitch.text;
+  // Deep-work ratio + delta vs last week
+  $('#kpi-deepratio').textContent = `${Math.round(deepRatio*100)||0}%`;
+  const dDeep = deltaPct(deepRatio, deepRatioPrev);
+  $('#delta-deep').className = 'delta ' + (dDeep.cls||''); $('#delta-deep').innerHTML = dDeep.text;
+
+  // Next-step coverage + delta vs last week coverage
+  $('#kpi-wip').textContent = `${coverageNow}%`;
+  const dCov = deltaPct(coverageNow, coveragePrev);
+  $('#delta-wip').className = 'delta ' + (dCov.cls||''); $('#delta-wip').innerHTML = dCov.text;
+
+  // ------- Work mix -------
+  const seg = (w, color, title)=> `<div class="mixseg" style="width:${w}%;background:${color}" title="${title}"></div>`;
+  const mix = [
+  {name:'Deep Work', pct:pct(deepHrs,hrsWeek),    color:'#1e5bff'},
+  {name:'Meetings',  pct:pct(meetingHrs,hrsWeek), color:'#77e0a5'},
+  {name:'Assist',    pct:pct(assistHrs,hrsWeek),  color:'#b68cff'},
+  {name:'Admin',     pct:pct(adminHrs,hrsWeek),   color:'#ffd36e'},
+  {name:'Training',  pct:pct(trainingHrs,hrsWeek),color:'#5fd2b3'}
+];
+
+// Compute “Other” after the known buckets
+const sumKnown = mix.reduce((a,x)=> a + x.pct, 0);
+mix.push({name:'Other', pct: Math.max(0, 100 - sumKnown), color:'#9aa4b2'});
+  const barEl = $('#mixBar');
+const legendEl = $('#mixLegend');
+legendEl.classList.add('mixlegend');
+
+if (hrsWeek > 0){
+  barEl.innerHTML = mix
+    .filter(x=>x.pct>0)
+    .map(x=> seg(x.pct, x.color, `${x.name} ${x.pct}%`))
+    .join('');
+  legendEl.innerHTML = mix.map(x =>
+    `<div class="item"><span class="dot" style="background:${x.color}"></span>${x.name}: <b>${x.pct}%</b></div>`
+  ).join('');
+} else {
+  barEl.innerHTML = '<div class="note">No hours logged this week</div>';
+  legendEl.innerHTML = '';
+}
+  // ------- Task aging (since first work) -------
+const titleEl = document.querySelector('#view-dashboard .cards .card h3');
+if (titleEl && titleEl.textContent.includes('WIP aging')) {
+  titleEl.textContent = 'Task aging (since first work)';
+}
+
+const ageSinceFirstWork = (t) => {
+  const events = DB.events
+    .filter(e => e.taskId === t.id)
+    .sort((a,b) => new Date(a.start) - new Date(b.start));
+  if (!events.length) return null;                    // not started -> don’t age
+  return Math.max(0, Math.floor((now - new Date(events[0].start)) / DAY));
+};
+
+const openStarted = DB.tasks
+  .filter(t => t.status !== 'Complete' && t.status !== 'Cancelled')
+  .map(t => ({ t, a: ageSinceFirstWork(t) }))
+  .filter(x => x.a !== null);                         // drop not-started tasks
+
+const ages = openStarted.map(x => x.a);
+const b0_3  = ages.filter(a => a <= 3).length;
+const b4_7  = ages.filter(a => a >= 4  && a <= 7 ).length;
+const b8_14 = ages.filter(a => a >= 8  && a <= 14).length;
+const b15   = ages.filter(a => a >= 15).length;
+
+$('#agingBars').innerHTML = `
+  <div class="agingrow">
+    <div class="aging"><div class="value">${b0_3}</div><div class="label">0–3d</div></div>
+    <div class="aging"><div class="value">${b4_7}</div><div class="label">4–7d</div></div>
+    <div class="aging"><div class="value">${b8_14}</div><div class="label">8–14d</div></div>
+    <div class="aging"><div class="value">${b15}</div><div class="label">15d+</div></div>
+  </div>
+`;
+
+$('#oldestList').innerHTML = openStarted.length
+  ? 'Oldest in progress:<br/>' + openStarted
+      .sort((x,y) => y.a - x.a)
+      .slice(0,5)
+      .map(x => {
+        const proj = DB.projects.find(p => p.id === x.t.projectId);
+        return `• ${escapeHtml(x.t.title)} <span class="note">(${escapeHtml(proj?.title || x.t.projectId)} · ${x.a}d)</span>`;
+      })
+      .join('<br/>')
+  : 'No tasks with logged work yet.';
+
+// ------- Plan & capacity (this week) -------
+(() => {
+  const riskEl = document.querySelector('#riskFlags');
+  if (!riskEl) return; // nothing to render into
+
+  // Uses helpers/consts already defined earlier in renderDashboard()
+  const dayHours = (DAY_END_MIN - DAY_START_MIN) / 60;   // 07:30–16:30 window
+  const weeklyCapacity = dayHours * 5;
+
+  // Events in the current week
+  const evWk = DB.events.filter(e => {
+    const s = new Date(e.start);
+    return s >= wkStart && s < wkEnd;
+  });
+
+  // Hours
+  const hrsSched = evWk.reduce((a,e)=> a + hours(e), 0);                       // uses your `hours(e)` helper
+  const deepHrs  = evWk.reduce((a,e)=> a + (e.category==='Deep Work' ? hours(e) : 0), 0);
+  const otherHrs = Math.max(0, hrsSched - deepHrs);
+  const freeHrs  = Math.max(0, weeklyCapacity - hrsSched);
+
+  // Progress bar
+  const pct = (n,d)=> d ? Math.round((n/d)*100) : 0;
+  const pDeep = pct(deepHrs, weeklyCapacity);
+  const pOther = pct(otherHrs, weeklyCapacity);
+  const pFree = Math.max(0, 100 - pDeep - pOther);
+  const seg = (w,c,t)=> `<div class="mixseg" style="width:${w}%;background:${c}" title="${t}"></div>`;
+  const barHtml = `
+    <div class="mixbar" style="margin-bottom:8px">
+      ${seg(pDeep,  '#1e5bff', 'Deep '  + deepHrs.toFixed(1)  + 'h')}
+      ${seg(pOther, '#77e0a5', 'Other ' + otherHrs.toFixed(1) + 'h')}
+      ${seg(pFree,  '#3b4452', 'Free '  + freeHrs.toFixed(1)  + 'h')}
+    </div>`;
+
+  // Goal & summary
+  const DEEP_GOAL = 8;
+  const deepLeft = Math.max(0, DEEP_GOAL - deepHrs);
+  const noteHtml = `Scheduled: <b>${hrsSched.toFixed(1)}h</b> / ${weeklyCapacity}h · `
+    + `Deep: <b>${deepHrs.toFixed(1)}h</b> (goal ${DEEP_GOAL}h; need ${deepLeft.toFixed(1)}h) · `
+    + `Free capacity: <b>${freeHrs.toFixed(1)}h</b>`;
+
+  // Next 3 ≥90m free windows this week
+  const freeWindows = [];
+  for (let i=0;i<5;i++){
+    const d = new Date(wkStart.getTime() + i*86400000);
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(DAY_START_MIN/60), DAY_START_MIN%60);
+    const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(DAY_END_MIN/60),   DAY_END_MIN%60);
+
+    const events = evWk
+      .filter(e => new Date(e.end) > dayStart && new Date(e.start) < dayEnd)
+      .map(e => ({ s:new Date(Math.max(new Date(e.start), dayStart)),
+                   e:new Date(Math.min(new Date(e.end),   dayEnd)) }))
+      .sort((a,b) => a.s - b.s);
+
+    let cur = dayStart;
+    for (const ev of events){
+      if (ev.s > cur) {
+        const gapH = (ev.s - cur)/36e5;
+        if (gapH >= 1.5 && ev.s > now) freeWindows.push({s:new Date(cur), e:new Date(ev.s), h:gapH});
+      }
+      if (ev.e > cur) cur = ev.e;
+    }
+    if (dayEnd > cur) {
+      const gapH = (dayEnd - cur)/36e5;
+      if (gapH >= 1.5 && dayEnd > now) freeWindows.push({s:new Date(cur), e:new Date(dayEnd), h:gapH});
+    }
+  }
+  freeWindows.sort((a,b)=> a.s - b.s);
+  const holes = freeWindows.slice(0,3);
+  const holesHtml = holes.length
+    ? 'Good windows (≥90m):<br>' + holes.map(x =>
+        `• ${x.s.toLocaleString([], {weekday:'short', hour:'numeric', minute:'2-digit'})}`
+        + ` → ${x.e.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}`
+        + ` <span class="note">(${x.h.toFixed(1)}h)</span>`
+      ).join('<br>')
+    : 'No 90-minute windows left this week.';
+
+  riskEl.innerHTML = barHtml + `<div class="note">${noteHtml}</div>` + `<div class="note" style="margin-top:6px">${holesHtml}</div>`;
+})();
+
+// --- Current step card (one "current" task per active non-quick project) ---
+(() => {
+  const quickTypes = new Set(['Meeting','Peer Assistance','Peer Testing']);
+  const now = new Date();
+  const earliestOpenTask = (pid)=>{
+  const open = DB.tasks.filter(t=> t.projectId===pid && t.status!=='Complete' && t.status!=='Cancelled');
+  if(!open.length) return null;
+  open.sort(seqSort);
+  return open[0];
+};
+
+  const projectsForSteps = DB.projects.filter(p =>
+    p.status!=='Complete' && p.status!=='Cancelled' && !quickTypes.has(p.type)
+  );
+
+  const rows = projectsForSteps.map(p => {
+    const t = earliestOpenTask(p.id);
+    let nextHint = '';
+    if (t) {
+      const nextEvt = DB.events
+        .filter(e => e.taskId === t.id && new Date(e.start) >= now)
+        .sort((a,b) => new Date(a.start) - new Date(b.start))[0];
+      if (nextEvt) nextHint = ` <span class="note">· next: ${fmtDate(nextEvt.start)}</span>`;
+    }
+    return `
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div><b>${escapeHtml(p.title)}</b></div>
+        <div>${t ? escapeHtml(t.title) : '<span class="note">No open tasks</span>'}${nextHint}</div>
+      </div>`;
+  });
+
+  const box = document.querySelector('#currentSteps');
+  if (box) box.innerHTML = rows.join('') || '<div class="note">No active projects.</div>';
+})();
+  // Render Inbox To-Dos (safe if the card isn't on this view)
+  renderTodos();
+}
+
+
+// --------- Projects ---------
+function renderProjects(){
+  const list = $('#projectList');
+  const q = ($('#projectSearch').value||'').toLowerCase();
+  const typeVal = $('#filterType').value || '';
+  const stage = $('#filterStage').value || '';
+  const statusMode = $('#filterStatus') ? $('#filterStatus').value : 'active';
+
+  const filtered = DB.projects.filter(p=>{
+    const text = `${p.id} ${p.title} ${p.customer} ${p.serviceLine||''}`.toLowerCase();
+    if(q && !text.includes(q)) return false;
+    if(stage && p.stage!==stage) return false;
+
+    // ⬇️ type filter: allow All, Real-only, or a single specific type
+    if (typeVal === REAL_TYPES_VALUE) {
+      if (!REAL_TYPES_SET.has(p.type)) return false;
+    } else if (typeVal && p.type !== typeVal) {
+      return false;
+    }
+
+    // status filter
+    if(statusMode === 'active'    && (p.status === 'Complete' || p.status === 'Cancelled')) return false;
+    if(statusMode === 'completed' && p.status !== 'Complete')  return false;
+    if(statusMode === 'cancelled' && p.status !== 'Cancelled') return false;
+
+    return true;
+  });
+
+  $('#projectEmpty').style.display = filtered.length? 'none':'block';
+  list.innerHTML = filtered.map(p=>{
+  const pri = p.priority==='High'? 'high' : p.priority==='Normal'? 'med' : 'low';
+  const ext = p.externalId || '';
+  const custSvc = `${p.customer || ''}${p.serviceLine ? ' — ' + p.serviceLine : ''}`;
+
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:flex-start">
+      <div>
+        <div class="note">${escapeHtml(ext)}</div>
+        <h3 style="margin:6px 0">${escapeHtml(p.title)}</h3>
+        <div class="note">${escapeHtml(custSvc)}</div>
+      </div>
+      <div class="pill ${pri}">${escapeHtml(p.priority)}</div>
+    </div>
+
+    <div class="row" style="margin-top:8px;gap:8px;color:#9fb0c3">
+      <div>Stage: <b>${escapeHtml(p.stage)}</b></div>
+      <div>Status: <b>${escapeHtml(p.status)}</b></div>
+      <div>Assigned: <b>${p.assignedDate || '—'}</b></div>
+    </div>
+
+    <div class="footer">
+      <button class="btn primary" onclick="viewProject('${p.id}')">Open</button>
+      <button class="btn" onclick="openProjectModal('${p.id}')">✏️ Edit</button>
+    </div>
+  </div>`;
+}).join('');
+}
+
+function updateTaskStatus(id, val){
+  const t = DB.tasks.find(x=>x.id===id); if(!t) return;
+  const prev = t.status || 'Not Started';
+  t.status = val;
+  // NEW: first time it moves off "Not Started"
+  if (prev === 'Not Started' && val !== 'Not Started' && !t.startedAt) {
+    t.startedAt = new Date().toISOString();
+  }
+  save();
+  renderDashboard(); // keeps KPIs fresh if they use startedAt
+}
+function updateTaskDone(id, val){ const t = DB.tasks.find(x=>x.id===id); if(!t) return; t.completedDate=val||''; save(); renderDashboard(); }
+
+function addDefaultTasksToProject(projectId, silent=false){
+  const p = DB.projects.find(p=>p.id===projectId); if(!p) return;
+  const defs = DB.defaults[p.type] || [];
+
+  let seqBase = nextSeq(projectId) - 1;
+  defs.forEach((d, idx)=>{
+    DB.tasks.push({
+      id: nextId('T','task'),
+      projectId,
+      title: d.title,
+      status: 'Not Started',
+      notes: '',
+      createdAt: new Date().toISOString(),
+      startedAt: '',
+      completedDate: '',
+      seq: seqBase + idx + 1
+    });
+  });
+
+  // normalize just in case
+  normalizeSeq(projectId);
+  save();
+  renderDashboard();
+  if (!silent && CURRENT_PROJECT_ID === projectId) renderProjectOverview();
+}
+
+// New project modal
+$('#newProjectBtn')?.addEventListener('click', ()=> openProjectModal());
+let EDITING_PROJECT_ID = null;
+let EDITING_EVENT_ID = null;
+
+function openProjectModal(projectId = null){
+  document.querySelector('#prjModalTitle').textContent = projectId ? 'Edit Project' : 'New Project';
+  const typesForNew = projectId
+  ? DB.lookups.projectTypes                                  // editing: show all, including Meeting etc.
+  : DB.lookups.projectTypes.filter(t =>                      // creating: show only rich types
+      !['Meeting','Peer Assistance','Peer Testing'].includes(t)
+    );
+setOptions(document.querySelector('#prjType'), typesForNew);
+  setOptions(document.querySelector('#prjPriority'), DB.lookups.priorities);
+  setOptions(document.querySelector('#prjStage'), DB.lookups.stages);
+  setOptions(document.querySelector('#prjStatus'), DB.lookups.statuses);
+  setOptions(document.querySelector('#prjServiceLine'), DB.lookups.serviceLines || []);
+  EDITING_PROJECT_ID = projectId;
+
+  if(projectId){
+    const p = DB.projects.find(x=>x.id===projectId);
+    document.querySelector('#prjTitle').value = p.title;
+    document.querySelector('#prjType').value = p.type;
+    document.querySelector('#prjCustomer').value = p.customer || '';
+    document.querySelector('#prjServiceLine').value = p.serviceLine || '';
+    document.querySelector('#prjPriority').value = p.priority;
+    document.querySelector('#prjStage').value = p.stage;
+    document.querySelector('#prjStatus').value = p.status;
+    document.querySelector('#prjDue').value = p.dueDate || '';
+    document.querySelector('#prjAssigned').value = p.assignedDate || '';
+    document.querySelector('#prjExt').value = p.externalId || '';
+    document.querySelector('#prjDesc').value = p.description || '';
+  } else {
+    ['prjTitle','prjCustomer','prjDue','prjAssigned','prjExt','prjDesc'].forEach(id=>document.querySelector('#'+id).value='');
+  }
+  openModal('#projectModal');
+}
+// Save (create or update)
+document.querySelector('#saveProject').onclick = ()=>{
+  const data = {
+    title: document.querySelector('#prjTitle').value.trim(),
+    type: document.querySelector('#prjType').value,
+    customer: document.querySelector('#prjCustomer').value.trim(),
+    serviceLine: document.querySelector('#prjServiceLine').value,   // NEW
+    priority: document.querySelector('#prjPriority').value,
+    stage: document.querySelector('#prjStage').value,
+    status: document.querySelector('#prjStatus').value,
+    dueDate: document.querySelector('#prjDue').value,
+    assignedDate: document.querySelector('#prjAssigned').value, 
+    externalId: document.querySelector('#prjExt').value.trim(),
+    description: document.querySelector('#prjDesc').value.trim()
+  };
+  if(!data.title){ alert('Please enter a title'); return; }
+
+  if(EDITING_PROJECT_ID){
+    const p = DB.projects.find(x=>x.id===EDITING_PROJECT_ID);
+    Object.assign(p, data);
+  } else {
+  const newId = nextId('P','project');
+  DB.projects.push({ id: newId, ...data });
+  // Auto-add defaults for this project type (no UI popups)
+  addDefaultTasksToProject(newId, true);
+}
+
+  save();
+  closeModal('#projectModal');
+  renderProjects();
+
+  if (CURRENT_PROJECT_ID && EDITING_PROJECT_ID === CURRENT_PROJECT_ID) renderProjectOverview();
+
+  EDITING_PROJECT_ID = null;
+};
+
+// --------- Project Overview (full page) & Delete Task ---------
+let CURRENT_PROJECT_ID = null;
+function viewProject(id){ CURRENT_PROJECT_ID = id; showView('project'); }
+
+// ---- Requirements templates (common + type-specific) ----
+const REQ_COMMON = [
+  { key:'businessQuestion', label:'Business Reason', type:'textarea' },
+  { key:'audience',         label:'Users', type:'textarea' },
+  { key:'success',          label:'Intended Output', type:'textarea' },
+  { key:'refresh',          label:'Refresh cadence', type:'select',
+    options:['One-time','Ad-hoc','Daily','Weekly','Monthly','Quarterly'] },
+  { key:'timeframe',        label:'Timeframe', type:'text', placeholder:'e.g., last 12 months rolling' },
+  { key:'links',            label:'Folder', type:'text' }
+];
+
+const REQ_SPECIFIC = {
+  'Ad-Hoc SQL': [
+    { key:'system',   label:'Base Data', type:'text' },
+    { key:'grain',    label:'Row grain', type:'text', placeholder:'e.g., one row per encounter' },
+    { key:'filters',  label:'Inclusion / Exclusion Criteria', type:'textarea' },
+    { key:'columns',  label:'Columns', type:'textarea' },
+    { key:'output',   label:'Output format', type:'select',
+      options:['Excel','CSV','View / Stored Procedure','Other'] },
+    { key:'delivery', label:'Delivery cadence', type:'select', options:['One-time','Recurring'] },
+    { key:'notes',  label:'Other Notes', type:'textarea' }
+  ],
+  'Tableau': [
+    { key:'kpis',            label:'KPIs', type:'textarea' },
+    { key:'dimensions',      label:'Graphs / Charts', type:'textarea' },
+    { key:'interactivity',   label:'Filters', type:'textarea' },
+    { key:'source',          label:'Data source', type:'textarea' },
+    { key:'refreshSchedule', label:'Refresh schedule', type:'select',
+      options:['Ad-hoc','Daily','Weekly','Monthly'] },
+    { key:'notes',  label:'Other Notes', type:'textarea' }
+  ],
+  'Reporting Workbench': [
+    { key:'universe',   label:'Base Data', type:'text' },
+    { key:'parameters', label:'Pre-Run Filtering', type:'textarea' },
+    { key:'columns',    label:'Columns/metrics', type:'textarea' },
+    { key:'print',      label:'Report Groups', type:'text' },
+    { key:'notes',  label:'Other Notes', type:'textarea' }
+  ],
+  'Radar Dashboard': [
+    { key:'metrics',  label:'Metrics', type:'textarea' },
+    { key:'targets',  label:'Targets & thresholds', type:'textarea' },
+    { key:'notes',  label:'Other Notes', type:'textarea' }
+  ],
+  'Peer Assistance': [
+    { key:'requestor',        label:'Coworker', type:'text' },
+    { key:'helpScope',        label:'Scope of help', type:'textarea' },
+  ],
+  'Peer Testing': [
+    { key:'artifact',   label:'Item to Test', type:'text' },
+    { key:'testCases',  label:'Issues', type:'textarea' }
+  ]
+};
+
+function reqFieldsFor(type){
+  return [...REQ_COMMON, ...(REQ_SPECIFIC[type] || [])];
+}
+
+function fieldControl(f, val){
+  val = val ?? '';
+  const ph = f.placeholder ? ` placeholder="${escapeHtml(f.placeholder)}"` : '';
+  if (f.type === 'select') {
+    const opts = (f.options||[]).map(o=> `<option ${o===val?'selected':''}>${escapeHtml(o)}</option>`).join('');
+    return `<select data-key="${f.key}">${opts}</select>`;
+  }
+  if (f.type === 'textarea') {
+    return `<textarea rows="3" data-key="${f.key}"${ph}>${escapeHtml(val)}</textarea>`;
+  }
+  return `<input data-key="${f.key}" value="${escapeHtml(val)}"${ph}/>`;
+}
+
+function renderReqSummary(project){
+  const req = project.requirements || {};
+  const fields = reqFieldsFor(project.type);
+  const filled = fields.filter(f => (req[f.key] && String(req[f.key]).trim().length));
+  if (!filled.length) {
+    return `<div class="note">Not captured yet. Click “Edit Requirements”.</div>`;
+  }
+  // Show the most useful fields first in summary
+  const order = ['businessQuestion','audience','success','refresh','timeframe','links',
+  'system','grain','filters','columns','output','delivery','kpis','dimensions',
+  'interactivity','source','refreshSchedule','universe','parameters','columns','print',
+'metrics','targets','notes'];
+  const byKey = new Map(fields.map(f=>[f.key,f]));
+  filled.sort((a,b)=> (order.indexOf(a.key)+999) - (order.indexOf(b.key)+999));
+
+  return filled.map(f=>{
+    const label = byKey.get(f.key)?.label || f.key;
+    return `<div class="row" style="gap:8px;align-items:flex-start">
+      <div class="note" style="width:220px">${escapeHtml(label)}</div>
+      <div style="flex:1"><b>${escapeHtml(String(req[f.key]))}</b></div>
+    </div>`;
+  }).join('');
+}
+
+function openReqModal(projectId){
+  const p = DB.projects.find(x=>x.id===projectId); if(!p) return;
+  const fields = reqFieldsFor(p.type);
+  $('#reqTypeNote').textContent = `${p.type} · ${p.title}`;
+  const data = p.requirements || {};
+  $('#reqForm').innerHTML = fields.map(f=> `
+    <div class="field">
+      <label>${escapeHtml(f.label)}</label>
+      ${fieldControl(f, data[f.key])}
+    </div>`).join('');
+
+  $('#saveReqBtn').onclick = ()=>{
+    const els = Array.from(document.querySelectorAll('#reqForm [data-key]'));
+    const next = {...(p.requirements||{})};
+    els.forEach(el=> { next[el.dataset.key] = (el.value||'').trim(); });
+    if (!next.capturedAt) next.capturedAt = new Date().toISOString();
+    p.requirements = next;
+    save();
+    closeModal('#reqModal');
+    renderProjectOverview();
+  };
+
+  openModal('#reqModal');
+}
+
+function renderProjectOverview(){
+  const p = DB.projects.find(x=>x.id===CURRENT_PROJECT_ID);
+  if(!p){ alert('Project not found'); showView('projects'); return; }
+
+  document.querySelector('#viewTitle').textContent = `Project · ${p.title}`;
+
+  const tasks = DB.tasks.filter(t=> t.projectId === p.id).sort(seqSort);
+  const total = tasks.length;
+  const done  = tasks.filter(t=>t.status==='Complete').length;
+  const open  = total - done;
+
+  const ev = DB.events.filter(e=>e.projectId===p.id);
+const hours = ev.reduce((a,e)=> a + ((new Date(e.end)-new Date(e.start))/36e5), 0);
+const pct = total ? Math.round((done/total)*100) : 0;
+
+// --- per-project work mix (all time) ---
+const hoursOf = arr => arr.reduce((a,e)=> a + ((new Date(e.end)-new Date(e.start))/36e5), 0);
+const deepH     = hoursOf(ev.filter(e=>e.category==='Deep Work'));
+const meetingH  = hoursOf(ev.filter(e=>e.category==='Meeting'));
+const assistH   = hoursOf(ev.filter(e=>e.category==='Assist'));
+const adminH    = hoursOf(ev.filter(e=>e.category==='Admin'));
+const trainingH = hoursOf(ev.filter(e=>e.category==='Training'));
+const otherH    = Math.max(0, hours - (deepH + meetingH + assistH + adminH + trainingH));
+const toPct = (num, den) => den ? Math.round((num/den)*100) : 0;
+
+const mix = [
+  {name:'Deep Work',         pct: toPct(deepH, hours),           color:'#1e5bff'},
+  {name:'Meetings+Assist',   pct: toPct(meetingH+assistH, hours), color:'#77e0a5'},
+  {name:'Admin',             pct: toPct(adminH, hours),           color:'#ffd36e'},
+  {name:'Training',          pct: toPct(trainingH, hours),        color:'#b68cff'},
+  {name:'Other',             pct: Math.max(0, 100 - (toPct(deepH, hours)+toPct(meetingH+assistH, hours)+toPct(adminH, hours)+toPct(trainingH, hours))), color:'#9aa4b2'}
+];
+
+const mixBarHtml = hours > 0
+  ? `<div class="mixbar">${mix.filter(x=>x.pct>0).map(x=> 
+       `<div class="mixseg" style="width:${x.pct}%;background:${x.color}" title="${x.name} ${x.pct}%"></div>`
+     ).join('')}</div>
+     <div class="note">${mix.map(x=>`${x.name}: <b>${x.pct}%</b>`).join(' · ')}</div>`
+  : `<div class="note">No hours logged yet</div>`;
+
+  document.querySelector('#projHeader').innerHTML = `
+  <div class="kpi"><div class="label">Completion</div><div class="value">${pct}%</div></div>
+  <div class="kpi"><div class="label">Open Tasks</div><div class="value">${open}</div></div>
+  <div class="kpi"><div class="label">Logged Hours</div><div class="value">${hours.toFixed(2)}</div></div>
+  <div class="kpi">
+    <div class="label">Work Mix</div>
+    ${mixBarHtml}
+  </div>`;
+
+    document.querySelector('#projDetails').innerHTML = `
+  <!-- LEFT column (row 1) -->
+  <div class="meta-label">External ID</div><div class="meta-value">${escapeHtml(p.externalId||'')}</div>
+  
+
+  <!-- RIGHT column (row 1): Description -->
+  <div class="meta-label">Description</div><div class="meta-value desc-value">${escapeHtml(p.description||'')}</div>
+
+  <!-- LEFT column (row 2) -->
+  <div class="meta-label">Type</div><div class="meta-value">${escapeHtml(p.type)}</div>
+  
+  <!-- RIGHT column (row 2) -->
+  <div class="meta-label">Stage</div><div class="meta-value">${escapeHtml(p.stage)}</div>
+  
+
+  <!-- LEFT column (row 3) -->
+  <div class="meta-label">Service Line</div><div class="meta-value">${escapeHtml(p.serviceLine||'—')}</div>
+  
+  <!-- RIGHT column (row 3) -->
+  <div class="meta-label">Status</div><div class="meta-value">${escapeHtml(p.status)}</div>
+
+  <!-- LEFT column (row 4) -->
+  <div class="meta-label">Customer</div><div class="meta-value">${escapeHtml(p.customer||'')}</div> 
+
+  <!-- RIGHT column (row 4) -->
+  <div class="meta-label">Priority</div><div class="meta-value">${escapeHtml(p.priority)}</div>
+  <div class="meta-label">Assigned</div><div class="meta-value">${escapeHtml(p.assignedDate || '—')}</div>
+  <div class="meta-label"></div><div class="meta-value"></div>  <!-- spacer to keep the 4-col grid aligned -->
+`;
+
+// Requirements summary + edit
+document.querySelector('#projReqSummary').innerHTML = renderReqSummary(p);
+document.querySelector('#editReqBtn').onclick = ()=> openReqModal(p.id);
+    document.querySelector('#projTasks').innerHTML = tasks.map(t=> {
+  return `<tr>
+    <td>${escapeHtml(t.title)}</td>
+    <td><select onchange="updateTaskStatus('${t.id}', this.value)">${DB.lookups.statuses.map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}</select></td>
+    <td style="width:160px"><input type="date" value="${t.completedDate||''}" onchange="updateTaskDone('${t.id}', this.value)"/></td>
+    <td style="width:60px"><button class="btn warn" onclick="deleteTask('${t.id}')">🗑️</button></td>
+  </tr>`;
+}).join('') || `<tr><td colspan="4" class="note">No tasks yet.</td></tr>`;
+
+  const now = new Date(); const in14 = new Date(); in14.setDate(now.getDate()+14);
+  const upcoming = ev.filter(e=> new Date(e.start)>=now && new Date(e.start)<=in14)
+                     .sort((a,b)=> new Date(a.start)-new Date(b.start));
+  document.querySelector('#projUpcoming').innerHTML = upcoming.map(e=>{
+    const t = DB.tasks.find(t=>t.id===e.taskId);
+    const hrs = ((new Date(e.end)-new Date(e.start))/36e5).toFixed(2);
+    return `<tr><td>${fmtDate(e.start)}</td><td>${fmtDate(e.end)}</td><td>${hrs}</td><td>${escapeHtml(t?.title||'')}</td><td>${escapeHtml(e.category||'')}</td></tr>`;
+  }).join('') || `<tr><td colspan="5" class="note">Nothing scheduled next 14 days.</td></tr>`;
+
+  const recentEvents = ev.slice().sort((a,b)=> new Date(b.start)-new Date(a.start)).slice(0,10)
+    .map(e=>`<li>${fmtDate(e.start)} · ${(((new Date(e.end)-new Date(e.start))/36e5).toFixed(2))}h · ${escapeHtml(e.category||'')}</li>`).join('');
+  const recentDone = tasks.filter(t=>t.completedDate).sort((a,b)=> new Date(b.completedDate)-new Date(a.completedDate)).slice(0,10)
+    .map(t=>`<li>${escapeHtml(t.title)} <span class="note">(${t.completedDate})</span></li>`).join('');
+  document.querySelector('#projActivity').innerHTML =
+    (recentEvents?`<h4>Recent Time Blocks</h4><ul>${recentEvents}</ul>`:'') +
+    (recentDone?`<h4>Recently Completed Tasks</h4><ul>${recentDone}</ul>`:'') ||
+    '<div class="note">No recent activity.</div>';
+
+  document.querySelector('#projNextSteps').value = p.next || '';
+  document.querySelector('#saveNextSteps').onclick = ()=>{ p.next = document.querySelector('#projNextSteps').value; save(); alert('Saved'); };
+  document.querySelector('#projAddTaskBtn').onclick = ()=> openTaskModal(p.id);
+  document.querySelector('#projPrintBtn').onclick = ()=> window.print();
+  document.querySelector('#projEditBtn').onclick = ()=> openProjectModal(p.id);
+}
+
+function deleteTask(id){
+  const t = DB.tasks.find(x=>x.id===id); if(!t) return;
+  if(!confirm('Delete this task? Any linked events will be kept but detached from this task.')) return;
+  DB.events.forEach(e=>{ if(e.taskId===id) e.taskId=''; });
+  DB.tasks = DB.tasks.filter(x=>x.id!==id);
+  save();
+  if(CURRENT_PROJECT_ID){ renderProjectOverview(); }
+  renderDashboard(); renderProjects(); renderEvents(); renderPlanner();
+if (CURRENT_PROJECT_ID === t.projectId) renderProjectOverview();
+}
+
+// --------- Planner ---------
+function renderPlanner(){
+  // Week anchor (Monday in local time)
+  const wkVal = $('#weekStart').value;
+  const wk = wkVal ? parseLocalDate(wkVal) : new Date();
+  const mon = mondayOf(wk);
+
+  // Keep picker synced
+  $('#weekStart').value = dateInput(mon);
+
+  // Build Mon–Fri dates
+  const days = [...Array(5)].map((_,i)=>{ const d = new Date(mon); d.setDate(mon.getDate()+i); return d; });
+
+  const cal = $('#cal');
+  cal.innerHTML = '';
+
+  // --- LEFT TIME COLUMN ---
+  const labels = [];
+  for(let i=0;i<NUM_SLOTS;i++){
+    const minutes = DAY_START_MIN + i*SLOT_MIN;  // minutes from midnight
+    const hh = Math.floor(minutes/60), mm = minutes%60;
+    const label = new Date(2000,0,1,hh,mm).toLocaleTimeString([], {hour:'numeric', minute:'2-digit'});
+    labels.push(`<div class="timecell">${label}</div>`);
+  }
+  cal.innerHTML += `<div class="timecol">${labels.join('')}</div>`;
+
+  // --- 5 DAY COLUMNS ---
+  days.forEach(d=>{
+    const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(DAY_START_MIN/60), DAY_START_MIN%60);
+    const dayEnd   = new Date(d.getFullYear(), d.getMonth(), d.getDate(), Math.floor(DAY_END_MIN/60), DAY_END_MIN%60);
+
+    // Slots (click to add)
+    const slotsHtml = [];
+    for(let i=0;i<NUM_SLOTS;i++){
+      const minutes = DAY_START_MIN + i*SLOT_MIN;
+      const hh = Math.floor(minutes/60), mm = minutes%60;
+      // month is 0-based already from getMonth(); pass raw y,m,d,h,m
+      slotsHtml.push(
+        `<div class="slot" onclick="slotNewEvent(${d.getFullYear()}, ${d.getMonth()}, ${d.getDate()}, ${hh}, ${mm}, 60)"></div>`
+      );
+    }
+
+    // Events that overlap the grid window
+    const events = DB.events
+      .filter(e=>{
+        const s = new Date(e.start), eEnd = new Date(e.end);
+        return eEnd > dayStart && s < dayEnd; // any overlap with the window
+      })
+      .sort((a,b)=> new Date(a.start)-new Date(b.start));
+
+    // Render events as absolute blocks
+    const evBlocks = events.map(e=>{
+  const s = new Date(e.start), eEnd = new Date(e.end);
+
+  // clip to the visible window
+  const clipStart = new Date(Math.max(s, dayStart));
+  const clipEnd   = new Date(Math.min(eEnd, dayEnd));
+  const minsFromStart = (clipStart - dayStart)/60000;
+  const durationMin   = Math.max(15, (clipEnd - clipStart)/60000);
+
+// Use row indexes so CSS aligns exactly with the grid
+const startIdx = minsFromStart / SLOT_MIN;           // 1.0 means one 30-min row
+const durIdx   = Math.max(1, durationMin / SLOT_MIN); // at least one row tall
+
+  const p = DB.projects.find(p=>p.id===e.projectId);
+  const t = DB.tasks.find(t=>t.id===e.taskId);
+
+  // small icon buttons
+  const doneBtn = (t && t.status !== 'Complete')
+    ? `<button class="btn good icon" title="Complete linked task" onclick="completeTaskFromEvent('${e.id}')">✓</button>`
+    : '';
+  const editBtn = `<button class="btn icon" title="Edit" onclick="openEventModal(null, '${e.id}')">✏️</button>`;
+  const delBtn  = `<button class="btn warn icon" title="Delete" onclick="deleteEvent('${e.id}')">🗑️</button>`;
+
+  return `
+    <div class="event-block"
+     style="top:calc(var(--slot-h) * ${startIdx});
+            height:calc(var(--slot-h) * ${durIdx} - 2px)">
+      <div class="event-title one-line">${escapeHtml(p?.title||'Unassigned')}</div>
+      ${t ? `<div class="event-task one-line">${escapeHtml(t.title)}</div>` : ''}
+      <div class="event-actions">${doneBtn}${editBtn}${delBtn}</div>
+    </div>`;
+}).join('');
+
+    cal.innerHTML += `
+      <div class="daycol">
+        <div class="dayhead">${d.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'})}</div>
+        <div class="daygrid">
+          ${slotsHtml.join('')}
+          ${evBlocks}
+        </div>
+      </div>`;
+  });
+}
+
+function deleteEvent(id){
+  const e = DB.events.find(x=>x.id===id);
+  if(!e){ alert('Time block not found'); return; }
+  if(!confirm('Delete this time block?')) return;
+  DB.events = DB.events.filter(x=>x.id!==id);
+  save();
+  renderPlanner(); renderEvents(); renderDashboard();
+}
+
+function completeTaskFromEvent(eventId){
+  const e = DB.events.find(x=>x.id===eventId);
+  if(!e){ alert('Time block not found'); return; }
+
+  if(!e.taskId){
+    alert('This time block is not linked to a task, so it cannot be completed here.');
+    return;
+  }
+
+  const t = DB.tasks.find(x=>x.id===e.taskId);
+  if(!t){ alert('Task not found'); return; }
+  if(t.status === 'Complete'){ alert('This task is already complete.'); return; }
+
+  // Confirm action
+  const endLocal = new Date(e.end);
+  const endStr = endLocal.toLocaleString([], { dateStyle:'medium', timeStyle:'short' });
+  const title = t.title || '(Untitled task)';
+  if(!confirm(`Mark "${title}" as Complete using the time block end:\n${endStr}?`)) return;
+
+  // If task was never "started", infer a start from its earliest event
+  if(!t.startedAt){
+    const taskEvents = DB.events
+      .filter(ev=>ev.taskId===t.id)
+      .sort((a,b)=> new Date(a.start) - new Date(b.start));
+    if(taskEvents.length){
+      t.startedAt = new Date(taskEvents[0].start).toISOString();
+    } else {
+      // fallback: use this event's start
+      t.startedAt = new Date(e.start).toISOString();
+    }
+  }
+
+  // Set status and completion timestamps
+  t.status = 'Complete';
+  // Date-only for the "Done" column UX:
+  t.completedDate = dateInput(endLocal);   // e.g., "2025-09-09" local date
+  // Keep a precise timestamp as well (optional field used by KPIs):
+  t.completedAt = endLocal.toISOString();
+
+  save();
+
+  // Refresh views that reflect task/event state
+  renderPlanner();
+  renderEvents();
+  renderDashboard();
+  renderProjects();
+
+  // If the full Project page or quick view is open, refresh it too
+  if (typeof CURRENT_PROJECT_ID !== 'undefined' && CURRENT_PROJECT_ID) {
+    renderProjectOverview();
+  }
+}
+
+function ensureTodoInit(){
+  if(!DB.counters.todo) DB.counters.todo = 1;
+  if(!Array.isArray(DB.todos)) DB.todos = [];
+}
+
+
+function renderTodos(){
+  const list = document.querySelector('#todoList');
+  if (!list) return;
+
+  if (!DB.todos || !DB.todos.length){
+    list.innerHTML = `<div class="note">No to-dos yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = DB.todos.map(t => `
+    <div class="todo-row">
+      <input type="checkbox" ${t.done ? 'checked' : ''} 
+             onclick="toggleTodo('${t.id}', this.checked)">
+      <div class="todo-main">
+        <div class="todo-title">${escapeHtml(t.text)}</div>
+        <div class="todo-meta">${new Date(t.createdAt).toLocaleString()}</div>
+      </div>
+      <button class="btn warn" onclick="deleteTodo('${t.id}')">Delete</button>
+    </div>
+  `).join('');
+}
+
+function addTodo(txt){
+  const text = (txt ?? '').trim();
+  if(!text) return;
+  ensureTodoInit();
+  DB.todos.unshift({ id: nextId('TD','todo'), text, done:false, createdAt: new Date().toISOString() });
+  save(); renderTodos();
+}
+
+function toggleTodo(id, done){
+  const t = DB.todos.find(x=>x.id===id); if(!t) return;
+  t.done = !!done; save(); renderTodos();
+}
+
+function deleteTodo(id){
+  DB.todos = DB.todos.filter(x=>x.id!==id); save(); renderTodos();
+}
+
+// --------- Events (Log) ---------
+function renderEvents(){
+  const q = ($('#eventSearch').value||'').toLowerCase();
+  const rows = DB.events
+    .slice().sort((a,b)=> new Date(b.start)-new Date(a.start))
+    .filter(e=>{
+      const p = DB.projects.find(p=>p.id===e.projectId); const t = DB.tasks.find(t=>t.id===e.taskId);
+      const text = `${p?.title||''} ${t?.title||''} ${e.notes||''}`.toLowerCase();
+      return !q || text.includes(q);
+    })
+    .map(e=>{
+      const hrs = ((new Date(e.end)-new Date(e.start))/36e5).toFixed(2);
+      const p = DB.projects.find(p=>p.id===e.projectId); const t = DB.tasks.find(t=>t.id===e.taskId);
+      return `<tr><td>${fmtDate(e.start)}</td><td>${fmtDate(e.end)}</td><td>${hrs}</td><td>${escapeHtml(p?.title||'')}</td><td>${escapeHtml(t?.title||'')}</td><td>${escapeHtml(e.category||'')}</td><td>${escapeHtml(e.notes||'')}</td></tr>`
+    }).join('');
+  $('#eventsTable tbody').innerHTML = rows || `<tr><td colspan="7" class="note">No time blocks yet.</td></tr>`;
+}
+
+// --------- Add Task / Event ---------
+function openTaskModal(projectId){
+  setOptions($('#taskProject'), DB.projects.map(p => `${p.id} · ${p.title}`));
+  setOptions($('#taskStatus'), DB.lookups.statuses);
+
+  const buildPositions = (pid)=>{
+    const posSel = $('#taskPos'); if (!posSel) return;
+    const ts = projectTasks(pid).sort(seqSort);
+    let html = '';
+    for (let i=1; i<=ts.length+1; i++){
+      const label = (i===ts.length+1)
+        ? `Position ${i} — at end`
+        : `Position ${i} — before “${ts[i-1].title}”`;
+      html += `<option value="${i}" ${i===ts.length+1?'selected':''}>${escapeHtml(label)}</option>`;
+    }
+    posSel.innerHTML = html;
+  };
+
+  // preselect project if coming from a project page
+  if (projectId){
+    const p = DB.projects.find(p=>p.id===projectId);
+    if (p) $('#taskProject').value = `${p.id} · ${p.title}`;
+  }
+
+  // build initial positions for the currently selected project
+  {
+    const [pid0] = ($('#taskProject').value||'').split(' · ');
+    if (pid0) buildPositions(pid0);
+  }
+
+  // rebuild positions if user changes project
+  $('#taskProject').onchange = ()=>{
+    const [pid] = ($('#taskProject').value||'').split(' · ');
+    buildPositions(pid);
+  };
+
+  $('#taskTitle').value = '';
+  $('#taskNotes').value = '';
+  openModal('#taskModal');
+}
+
+
+$('#saveTask').onclick = ()=>{
+  const [pid] = ($('#taskProject').value||'').split(' · ');
+  const title = ($('#taskTitle').value||'').trim();
+  if(!pid || !title){ alert('Pick a project and enter a title'); return; }
+
+  const t = {
+    id: nextId('T','task'),
+    projectId: pid,
+    title,
+    status: $('#taskStatus').value,
+    notes: ($('#taskNotes').value||'').trim(),
+    createdAt: new Date().toISOString(),
+    startedAt: '',
+    completedDate: '',
+    seq: nextSeq(pid) // provisional
+  };
+  DB.tasks.push(t);
+
+  const posVal = Number($('#taskPos')?.value);
+  insertTaskAt(pid, t, Number.isFinite(posVal) ? posVal : undefined);
+
+  save();
+  closeModal('#taskModal');
+  renderProjects(); renderDashboard();
+  if (CURRENT_PROJECT_ID === pid) renderProjectOverview();
+};
+
+// Helper to format Date -> "YYYY-MM-DDTHH:MM" for <input type="datetime-local">
+const dtInput = d => {
+  const pad = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+function openEventModal(projectId = null, eventId = null){
+  EDITING_EVENT_ID = eventId;
+
+  // populate selects
+  const pjSel = $('#evProject');
+  pjSel.innerHTML = '<option value="">—</option>' + DB.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.id)} · ${escapeHtml(p.title)}</option>`).join('');
+  const taskSel = $('#evTask');
+  taskSel.innerHTML = '<option value="">—</option>';
+  pjSel.onchange = () => {
+    const pid = pjSel.value;
+    const tasks = DB.tasks
+      .filter(t => t.projectId === pid)
+      .sort(seqSort);
+    taskSel.innerHTML =
+      '<option value="">—</option>' +
+      tasks.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
+  };
+
+  // defaults
+  $('#evCat').value = 'Deep Work';
+  $('#evStart').value=''; $('#evEnd').value=''; $('#evNotes').value='';
+  // --- Quick project UI wiring ---
+const qpWrap = $('#evQuickProject');
+const qpToggle = $('#qpToggle');
+
+if (qpWrap && qpToggle) {
+  qpWrap.classList.add('hidden');
+  qpToggle.onclick = () => qpWrap.classList.toggle('hidden');
+
+  const qpType = $('#qpType');
+  const qpTitle = $('#qpTitle');
+  const qpTask  = $('#qpTask');
+
+  if (qpType) {
+    qpType.onchange = () => {
+      if (!qpTitle.value) qpTitle.value = qpType.value || '';
+      if (!qpTask.value)  qpTask.value  = qpType.value || 'Task';
+    };
+  }
+}
+
+  if (eventId){
+    // EDIT existing event
+    const e = DB.events.find(x=>x.id===eventId);
+    if(!e){ alert('Time block not found'); return; }
+    pjSel.value = e.projectId || '';
+    pjSel.onchange(); // load tasks for this project
+    taskSel.value = e.taskId || '';
+    $('#evCat').value = e.category || 'Deep Work';
+    $('#evStart').value = dtInput(new Date(e.start));
+    $('#evEnd').value   = dtInput(new Date(e.end));
+    $('#evNotes').value = e.notes || '';
+  } else if (projectId){
+    // CREATE for a project
+    pjSel.value = projectId;
+    pjSel.onchange();
+  }
+
+  openModal('#eventModal');
+}
+
+function saveEventCommon(){
+  let pid = $('#evProject').value || '';
+let tid = $('#evTask').value || '';
+
+// If the quick-project form is open and a quick type is selected, create a minimal project + single task.
+const qpWrap = $('#evQuickProject');
+const qpTypeEl = $('#qpType');
+
+if (qpWrap && !qpWrap.classList.contains('hidden') && qpTypeEl && qpTypeEl.value) {
+  const qType = qpTypeEl.value;
+  const qTitle = ($('#qpTitle').value || qType).trim();
+  const qCustomer = ($('#qpCustomer').value || '').trim();
+  const qTaskTitle = ($('#qpTask').value || qType).trim();
+
+  // Make the project
+  const newProj = {
+    id: nextId('P','project'),
+    title: qTitle,
+    type: qType,                          // Meeting / Peer Assistance / Peer Testing only
+    customer: qCustomer,
+    serviceLine: '',
+    priority: 'Normal',
+    stage: 'Build',
+    status: 'In Progress',
+    dueDate: '',
+    externalId: '',
+    description: ''
+  };
+  DB.projects.push(newProj);
+
+  // Make exactly one task (or use defaults if defined for that type)
+  const defs = DB.defaults[qType] || [];
+  if (defs.length) {
+    defs.forEach(d => DB.tasks.push({
+      id: nextId('T','task'),
+      projectId: newProj.id,
+      title: d.title,
+      status: 'Not Started',
+      notes: '',
+      createdAt: new Date().toISOString(),
+      startedAt: '',
+      completedDate: ''
+    }));
+    // pick the first task for the event if user didn't choose one
+    const firstTask = DB.tasks.find(t => t.projectId === newProj.id);
+    tid = tid || (firstTask ? firstTask.id : '');
+  } else {
+    const t = {
+      id: nextId('T','task'),
+      projectId: newProj.id,
+      title: qTaskTitle,
+      status: 'Not Started',
+      notes: '',
+      createdAt: new Date().toISOString(),
+      startedAt: '',
+      completedDate: ''
+    };
+    DB.tasks.push(t);
+    tid = t.id;
+  }
+  pid = newProj.id;
+}
+  const start = $('#evStart').value;
+  const end   = $('#evEnd').value;
+
+  if(!start || !end){ alert('Start and End required'); return; }
+  if(new Date(end) <= new Date(start)){ alert('End must be after Start'); return; }
+
+  const payload = {
+    projectId: pid,
+    taskId: tid,
+    category: $('#evCat').value,
+    start,
+    end,
+    notes: $('#evNotes').value.trim()
+  };
+
+  if (EDITING_EVENT_ID){
+    // UPDATE existing event
+    const e = DB.events.find(x=>x.id===EDITING_EVENT_ID);
+    if(!e){ alert('Time block not found'); return; }
+    Object.assign(e, payload);
+  } else {
+    // CREATE new event
+    const e = { id: nextId('E','event'), ...payload };
+    DB.events.push(e);
+  }
+
+  save();
+  EDITING_EVENT_ID = null;
+  closeModal('#eventModal');
+  renderPlanner(); renderEvents(); renderDashboard();
+}
+
+$('#saveEvent').addEventListener('click', saveEventCommon);
+$('#newEventBtn')?.addEventListener('click', ()=> openEventModal());
+$('#newEventBtn2')?.addEventListener('click', ()=> openEventModal());
+
+// --------- Settings ---------
+function renderSettings(){
+  $('#lkProjectTypes').value = DB.lookups.projectTypes.join(', ');
+  $('#lkStages').value = DB.lookups.stages.join(', ');
+  $('#lkPriorities').value = DB.lookups.priorities.join(', ');
+  $('#lkStatuses').value = DB.lookups.statuses.join(', ');
+  $('#lkServiceLines').value = (DB.lookups.serviceLines||[]).join(', ');
+  $('#defaultsJson').value = JSON.stringify(DB.defaults, null, 2);
+
+  // Filters on Projects screen
+  const ft = $('#filterType'), fs = $('#filterStage');
+
+  // Build options: All, Real-only, then each individual type
+  const typeOptions = [
+    `<option value="">All Types</option>`,
+    `<option value="${REAL_TYPES_VALUE}">Real project types</option>`,
+    ...DB.lookups.projectTypes.map(t =>
+      `<option value="${escapeHtml(t)}">${escapeHtml(t)}</option>`
+    )
+  ].join('');
+  ft.innerHTML = typeOptions;
+
+  // Default the selector once per load to "Real project types"
+  if (!ft.dataset.init) { ft.value = REAL_TYPES_VALUE; ft.dataset.init = '1'; }
+
+  fs.innerHTML = '<option value="">All Stages</option>' +
+                 DB.lookups.stages.map(s=>`<option>${escapeHtml(s)}</option>`).join('');
+}
+$('#saveLookups').addEventListener('click', ()=>{
+  DB.lookups.projectTypes = $('#lkProjectTypes').value.split(',').map(s=>s.trim()).filter(Boolean);
+  DB.lookups.stages = $('#lkStages').value.split(',').map(s=>s.trim()).filter(Boolean);
+  DB.lookups.priorities = $('#lkPriorities').value.split(',').map(s=>s.trim()).filter(Boolean);
+  DB.lookups.statuses = $('#lkStatuses').value.split(',').map(s=>s.trim()).filter(Boolean);
+  DB.lookups.serviceLines = $('#lkServiceLines').value.split(',').map(s=>s.trim()).filter(Boolean);
+  save(); alert('Lookups saved'); renderProjects();
+});
+$('#saveDefaults').addEventListener('click', ()=>{
+  try{ DB.defaults = JSON.parse($('#defaultsJson').value); save(); alert('Defaults saved'); }
+  catch(e){ alert('Invalid JSON'); }
+});
+
+// --------- Backup/Restore ---------
+$('#backupBtn').addEventListener('click', ()=>{
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'work-tracker-backup.json'; a.click();
+});
+$('#restoreFile').addEventListener('change', ev=>{
+  const f = ev.target.files[0]; if(!f) return; const r = new FileReader(); r.onload = ()=>{ try{ DB = JSON.parse(r.result); save(); location.reload(); } catch(e){ alert('Invalid backup'); } }; r.readAsText(f);
+});
+
+// --------- Modals ---------
+function openModal(sel){ $$('.modal').forEach(m=>m.classList.remove('open')); $(sel).classList.add('open'); }
+function closeModal(sel){ $(sel).classList.remove('open'); }
+$$('.modal [data-close]').forEach(b=> b.addEventListener('click', e=> e.target.closest('.modal').classList.remove('open')));
+window.addEventListener('keydown', e=>{ if(e.key==='Escape') $$('.modal.open').forEach(m=>m.classList.remove('open')); });
+
+// --------- Init ---------
+$('#projectSearch')?.addEventListener('input', renderProjects);
+$('#eventSearch')?.addEventListener('input', renderEvents);
+$('#filterType')?.addEventListener('change', renderProjects);
+$('#filterStage')?.addEventListener('change', renderProjects);
+$('#filterStatus')?.addEventListener('change', renderProjects);
+$('#weekStart')?.addEventListener('change', renderPlanner);
+$('#todoInput')?.addEventListener('keydown', e=>{
+  if (e.key === 'Enter') { addTodo(e.target.value); e.target.value = ''; }
+});
+
+
+// populate filters and initial renders
+renderSettings();
+showView('dashboard', document.querySelector('[data-view="dashboard"]'));
+
+</script>
+</body>
+</html>
