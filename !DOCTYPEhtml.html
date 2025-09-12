@@ -765,6 +765,28 @@ function insertTaskAt(pid, taskObj, pos /* 1..N+1 */){
   ts.forEach((t,i)=> t.seq = i+1); // renumber 1..N
 }
 
+// ---- Project status auto-sync (complete when no open tasks) ----
+function syncProjectStatus(pid){
+  const p = DB.projects.find(p => p.id === pid);
+  if (!p) return;
+
+  const tasks = DB.tasks.filter(t => t.projectId === pid);
+  if (tasks.length === 0) return; // don’t auto-complete empty projects
+
+  // Treat only non-Complete/non-Cancelled as “open”
+  const hasOpen = tasks.some(t => t.status !== 'Complete' && t.status !== 'Cancelled');
+
+  if (!hasOpen) {
+    // All tasks are finished/cancelled → mark project complete
+    p.status = 'Complete';
+    if (!p.completedAt) p.completedAt = new Date().toISOString(); // optional stamp
+  } else if (p.status === 'Complete') {
+    // If new/open work appears later, bump it back to active
+    p.status = 'In Progress';
+    delete p.completedAt;
+  }
+}
+
 // --- Backfill task.seq per project once (idempotent) ---
 (function backfillTaskSeq(){
   DB.projects.forEach(p => normalizeSeq(p.id));
@@ -1241,14 +1263,20 @@ function updateTaskStatus(id, val){
   const t = DB.tasks.find(x=>x.id===id); if(!t) return;
   const prev = t.status || 'Not Started';
   t.status = val;
-  // NEW: first time it moves off "Not Started"
   if (prev === 'Not Started' && val !== 'Not Started' && !t.startedAt) {
     t.startedAt = new Date().toISOString();
   }
+  syncProjectStatus(t.projectId);   // ← add
   save();
-  renderDashboard(); // keeps KPIs fresh if they use startedAt
+  renderDashboard();
 }
-function updateTaskDone(id, val){ const t = DB.tasks.find(x=>x.id===id); if(!t) return; t.completedDate=val||''; save(); renderDashboard(); }
+function updateTaskDone(id, val){
+  const t = DB.tasks.find(x=>x.id===id); if(!t) return;
+  t.completedDate = val || '';
+  syncProjectStatus(t.projectId);   // ← add (in case you mark done dates consistently)
+  save();
+  renderDashboard();
+}
 
 function addDefaultTasksToProject(projectId, silent=false){
   const p = DB.projects.find(p=>p.id===projectId); if(!p) return;
@@ -1593,6 +1621,7 @@ function deleteTask(id){
   if(!confirm('Delete this task? Any linked events will be kept but detached from this task.')) return;
   DB.events.forEach(e=>{ if(e.taskId===id) e.taskId=''; });
   DB.tasks = DB.tasks.filter(x=>x.id!==id);
+  syncProjectStatus(t.projectId);
   save();
   if(CURRENT_PROJECT_ID){ renderProjectOverview(); }
   renderDashboard(); renderProjects(); renderEvents(); renderPlanner();
@@ -1665,6 +1694,8 @@ const durIdx   = Math.max(1, durationMin / SLOT_MIN); // at least one row tall
 
   const p = DB.projects.find(p=>p.id===e.projectId);
   const t = DB.tasks.find(t=>t.id===e.taskId);
+  const openBtn = p ? `<button class="btn icon" title="Open project page"
+  onclick="openProjectFromEvent('${e.id}')">↗</button>` : '';
 
   // small icon buttons
   const doneBtn = (t && t.status !== 'Complete')
@@ -1675,11 +1706,12 @@ const durIdx   = Math.max(1, durationMin / SLOT_MIN); // at least one row tall
 
   return `
     <div class="event-block"
-     style="top:calc(var(--slot-h) * ${startIdx});
-            height:calc(var(--slot-h) * ${durIdx} - 2px)">
-      <div class="event-title one-line">${escapeHtml(p?.title||'Unassigned')}</div>
+         style="top:calc(var(--slot-h) * ${startIdx});
+                height:calc(var(--slot-h) * ${durIdx} - 2px)"
+         ${p ? `ondblclick="openProjectFromEvent('${e.id}')"` : ''}>
+      <div class="event-title one-line">${escapeHtml(p?.title || 'Unassigned')}</div>
       ${t ? `<div class="event-task one-line">${escapeHtml(t.title)}</div>` : ''}
-      <div class="event-actions">${doneBtn}${editBtn}${delBtn}</div>
+      <div class="event-actions">${openBtn}${doneBtn}${editBtn}${delBtn}</div>
     </div>`;
 }).join('');
 
@@ -1701,6 +1733,12 @@ function deleteEvent(id){
   DB.events = DB.events.filter(x=>x.id!==id);
   save();
   renderPlanner(); renderEvents(); renderDashboard();
+}
+
+function openProjectFromEvent(eventId){
+  const e = DB.events.find(x => x.id === eventId);
+  if (!e || !e.projectId) { alert('This block is not linked to a project.'); return; }
+  viewProject(e.projectId);
 }
 
 function completeTaskFromEvent(eventId){
@@ -1741,7 +1779,7 @@ function completeTaskFromEvent(eventId){
   t.completedDate = dateInput(endLocal);   // e.g., "2025-09-09" local date
   // Keep a precise timestamp as well (optional field used by KPIs):
   t.completedAt = endLocal.toISOString();
-
+  syncProjectStatus(t.projectId);
   save();
 
   // Refresh views that reflect task/event state
@@ -1881,6 +1919,7 @@ $('#saveTask').onclick = ()=>{
 
   const posVal = Number($('#taskPos')?.value);
   insertTaskAt(pid, t, Number.isFinite(posVal) ? posVal : undefined);
+  syncProjectStatus(pid); 
 
   save();
   closeModal('#taskModal');
@@ -1897,20 +1936,48 @@ const dtInput = d => {
 function openEventModal(projectId = null, eventId = null){
   EDITING_EVENT_ID = eventId;
 
-  // populate selects
-  const pjSel = $('#evProject');
-  pjSel.innerHTML = '<option value="">—</option>' + DB.projects.map(p=>`<option value="${p.id}">${escapeHtml(p.id)} · ${escapeHtml(p.title)}</option>`).join('');
-  const taskSel = $('#evTask');
-  taskSel.innerHTML = '<option value="">—</option>';
-  pjSel.onchange = () => {
-    const pid = pjSel.value;
-    const tasks = DB.tasks
-      .filter(t => t.projectId === pid)
-      .sort(seqSort);
-    taskSel.innerHTML =
-      '<option value="">—</option>' +
-      tasks.map(t => `<option value="${t.id}">${escapeHtml(t.title)}</option>`).join('');
-  };
+ // populate selects (active-only; include current values if editing)
+const pjSel = $('#evProject');
+const taskSel = $('#evTask');
+
+const editingEvent = eventId ? DB.events.find(x => x.id === eventId) : null;
+const currentPid   = editingEvent?.projectId || projectId || '';
+const currentTid   = editingEvent?.taskId || '';
+
+const isInactiveProj = p => (p.status === 'Complete' || p.status === 'Cancelled');
+const isInactiveTask = t => (t.status === 'Complete' || t.status === 'Cancelled');
+
+// Only active projects, plus the current one if we're editing an old/archived event
+const projectsForSelect = DB.projects.filter(p =>
+  !isInactiveProj(p) || p.id === currentPid
+);
+
+pjSel.innerHTML = '<option value="">—</option>' + projectsForSelect.map(p => {
+  const label = `${p.id} · ${p.title}${isInactiveProj(p) ? ' (archived)' : ''}`;
+  return `<option value="${p.id}">${escapeHtml(label)}</option>`;
+}).join('');
+
+taskSel.innerHTML = '<option value="">—</option>';
+
+pjSel.onchange = () => {
+  const pid = pjSel.value;
+  // Only active tasks from the chosen project, plus the current one if editing
+  const tasksForSelect = DB.tasks
+    .filter(t => t.projectId === pid && (!isInactiveTask(t) || t.id === currentTid))
+    .sort(seqSort);
+
+  taskSel.innerHTML = '<option value="">—</option>' + tasksForSelect.map(t => {
+    const label = `${t.title}${isInactiveTask(t) ? ' (done)' : ''}`;
+    return `<option value="${t.id}">${escapeHtml(label)}</option>`;
+  }).join('');
+};
+
+// Preselect if we’re editing or the caller passed a projectId
+if (currentPid) {
+  pjSel.value = currentPid;
+  pjSel.onchange();
+  if (currentTid) taskSel.value = currentTid;
+}
 
   // defaults
   $('#evCat').value = 'Deep Work';
