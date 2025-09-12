@@ -201,6 +201,25 @@
   display:flex;
   gap:6px;
 }
+/* Hide hover-only action buttons until the event is hovered/focused */
+.event-actions .hoveronly{
+  opacity:0;
+  transform: translateY(2px);
+  pointer-events:none;
+  transition: opacity .14s ease, transform .14s ease;
+}
+.event-block:hover .event-actions .hoveronly,
+.event-block:focus-within .event-actions .hoveronly{
+  opacity:1;
+  transform:none;
+  pointer-events:auto;
+}
+
+/* Touch devices: always show (no hover) */
+@media (hover:none) and (pointer:coarse){
+  .event-actions .hoveronly{ opacity:1; pointer-events:auto; transform:none; }
+}
+
 .btn.icon{                    /* small round icon buttons */
   padding:2px 6px;
   border-radius:8px;
@@ -1694,24 +1713,30 @@ const durIdx   = Math.max(1, durationMin / SLOT_MIN); // at least one row tall
 
   const p = DB.projects.find(p=>p.id===e.projectId);
   const t = DB.tasks.find(t=>t.id===e.taskId);
-  const openBtn = p ? `<button class="btn icon" title="Open project page"
-  onclick="openProjectFromEvent('${e.id}')">↗</button>` : '';
 
-  // small icon buttons
+    // small icon buttons
+  const openBtn = p
+  ? `<button class="btn icon hoveronly" title="Open project page"
+             onclick="openProjectFromEvent('${e.id}')">↗</button>`
+  : '';
+  const editBtn = `<button class="btn icon hoveronly" title="Edit"
+    onclick="openEventModal(null, '${e.id}')">✏️</button>`;
+  const delBtn  = `<button class="btn warn icon hoveronly" title="Delete"
+    onclick="deleteEvent('${e.id}')">🗑️</button>`;
   const doneBtn = (t && t.status !== 'Complete')
-    ? `<button class="btn good icon" title="Complete linked task" onclick="completeTaskFromEvent('${e.id}')">✓</button>`
-    : '';
-  const editBtn = `<button class="btn icon" title="Edit" onclick="openEventModal(null, '${e.id}')">✏️</button>`;
-  const delBtn  = `<button class="btn warn icon" title="Delete" onclick="deleteEvent('${e.id}')">🗑️</button>`;
+  ? `<button class="btn good icon" title="Complete linked task"
+             onclick="completeTaskFromEvent('${e.id}')">✓</button>`
+  : '';
 
   return `
     <div class="event-block"
+     tabindex="0"
          style="top:calc(var(--slot-h) * ${startIdx});
                 height:calc(var(--slot-h) * ${durIdx} - 2px)"
          ${p ? `ondblclick="openProjectFromEvent('${e.id}')"` : ''}>
       <div class="event-title one-line">${escapeHtml(p?.title || 'Unassigned')}</div>
       ${t ? `<div class="event-task one-line">${escapeHtml(t.title)}</div>` : ''}
-      <div class="event-actions">${openBtn}${doneBtn}${editBtn}${delBtn}</div>
+      <div class="event-actions">${openBtn}${editBtn}${delBtn}${doneBtn}</div>
     </div>`;
 }).join('');
 
