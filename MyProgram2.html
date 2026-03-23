@@ -1,0 +1,3983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Work Command Center</title>
+  <style>
+    :root{
+      --sage:#93B7BE;
+      --ivory:#F1FFFA;
+      --sand:#D5C7BC;
+      --mauve:#785964;
+      --charcoal:#454545;
+
+      --bg:#F1FFFA;
+      --panel:#ffffff;
+      --panel-alt:#f8f5f3;
+      --line:#dfd3cc;
+      --text:#454545;
+      --muted:#6f6b69;
+      --accent:#93B7BE;
+      --accent-soft:#e7f1f2;
+      --priority:#785964;
+      --warn:#c28b54;
+      --danger:#c96464;
+      --success:#6ea58a;
+      --shadow:0 10px 28px rgba(69,69,69,.08);
+      --radius:18px;
+      --slot-h:28px;
+      --sidebar-w:240px;
+      --topbar-h:72px;
+    }
+
+    *{box-sizing:border-box}
+    html,body{
+      margin:0;
+      padding:0;
+      background:var(--bg);
+      color:var(--text);
+      font-family:Inter,Segoe UI,system-ui,-apple-system,sans-serif;
+    }
+    button,input,select,textarea{font:inherit}
+
+    .layout{
+      display:grid;
+      grid-template-columns:var(--sidebar-w) 1fr;
+      min-height:100vh;
+    }
+
+    .sidebar{
+      background:linear-gradient(180deg,#8cb1b8 0%, #93B7BE 100%);
+      border-right:1px solid rgba(69,69,69,.12);
+      padding:18px 14px;
+      position:sticky;
+      top:0;
+      height:100vh;
+      display:flex;
+      flex-direction:column;
+      gap:16px;
+    }
+
+    .sidebar-section-label{
+    font-size:18px;
+    font-weight:800;
+    letter-spacing:.01em;
+    color:var(--charcoal);
+    padding:2px 8px 6px 8px;
+    margin-top:2px;
+    line-height:1.2;
+    }
+
+    .nav{
+      display:grid;
+      gap:8px;
+    }
+
+    .nav-btn{
+      width:100%;
+      display:flex;
+      align-items:center;
+      gap:12px;
+      border:none;
+      background:rgba(241,255,250,.35);
+      color:var(--text);
+      padding:12px 14px;
+      border-radius:14px;
+      cursor:pointer;
+      text-align:left;
+      transition:.16s ease;
+      font-weight:600;
+    }
+    .nav-btn:hover{
+      background:rgba(241,255,250,.62);
+      transform:translateX(2px);
+    }
+    .nav-btn.active{
+      background:var(--ivory);
+      box-shadow:0 8px 18px rgba(69,69,69,.10);
+    }
+
+    .nav-icon{
+      width:18px;
+      text-align:center;
+      opacity:.82;
+      font-size:15px;
+    }
+
+    .sidebar-card{
+      margin-top:auto;
+      background:rgba(241,255,250,.55);
+      border:1px solid rgba(69,69,69,.10);
+      border-radius:16px;
+      padding:14px;
+    }
+
+    .main{
+      min-width:0;
+      display:flex;
+      flex-direction:column;
+    }
+
+    .topbar{
+      height:var(--topbar-h);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding:0 22px;
+      background:var(--panel);
+      border-bottom:1px solid var(--line);
+      position:sticky;
+      top:0;
+      z-index:20;
+    }
+
+    .topbar h1{
+    margin:0;
+    font-size:22px;
+    font-weight:800;
+    letter-spacing:.01em;
+    color:var(--charcoal);
+    }
+
+    .topbar-right{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      position:relative;
+    }
+
+    .icon-btn{
+      width:42px;
+      height:42px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:var(--panel-alt);
+      color:var(--charcoal);
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      transition:.16s ease;
+      font-size:18px;
+    }
+    .icon-btn:hover{
+      background:#ece3de;
+      transform:translateY(-1px);
+    }
+
+    .settings-menu{
+      position:absolute;
+      top:50px;
+      right:0;
+      min-width:220px;
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:16px;
+      box-shadow:var(--shadow);
+      padding:8px;
+      display:none;
+      z-index:30;
+    }
+    .settings-menu.open{display:block}
+
+    .menu-btn{
+      width:100%;
+      text-align:left;
+      border:none;
+      background:transparent;
+      color:var(--text);
+      padding:11px 12px;
+      border-radius:10px;
+      cursor:pointer;
+    }
+    .menu-btn:hover{
+      background:var(--accent-soft);
+    }
+
+    .content{
+      padding:18px;
+    }
+
+    .view{display:none}
+    .view.active{display:block}
+
+    .grid{display:grid;gap:14px}
+    .dash-grid{grid-template-columns:1.2fr .9fr .9fr}
+    .two-col{grid-template-columns:1.15fr .85fr}
+
+    .panel{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      padding:14px;
+    }
+
+    .panel.tinted{
+      background:linear-gradient(180deg,#ffffff 0%, #faf7f5 100%);
+    }
+
+    .panel-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-bottom:10px;
+    }
+
+    h2{margin:0;font-size:17px;color:var(--charcoal)}
+    h3{margin:0;font-size:15px;color:var(--charcoal)}
+
+    .subtle{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.4;
+    }
+
+    .btn{
+      border:1px solid var(--line);
+      background:var(--panel-alt);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:12px;
+      cursor:pointer;
+      transition:.15s ease;
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{
+      background:var(--accent);
+      border-color:transparent;
+      color:white;
+    }
+    .btn.success{
+      background:var(--success);
+      border-color:transparent;
+      color:white;
+    }
+    .btn.danger{
+      background:var(--danger);
+      border-color:transparent;
+      color:white;
+    }
+    .btn.small{
+      padding:7px 10px;
+      font-size:12px;
+      border-radius:10px;
+    }
+
+    .card-list{display:grid;gap:10px}
+    .stack{display:grid;gap:10px}
+
+    .item-card{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      background:linear-gradient(180deg,#ffffff 0%, #faf7f5 100%);
+    }
+    .item-card.priority{border-left:6px solid var(--priority)}
+    .item-card.reminder{border-left:6px solid var(--warn)}
+    .item-card.project{border-left:6px solid var(--accent)}
+
+    .item-top{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:flex-start;
+      flex-wrap:wrap;
+    }
+
+    .item-title{
+      font-weight:700;
+      font-size:15px;
+      color:var(--charcoal);
+    }
+
+    .chips{
+      display:flex;
+      gap:7px;
+      flex-wrap:wrap;
+      margin-top:6px;
+    }
+
+    .chip{
+      font-size:11px;
+      padding:5px 8px;
+      border-radius:999px;
+      background:#f3ece8;
+      color:var(--muted);
+      border:1px solid #e3d8d1;
+    }
+    .chip.blue{background:#e7f1f2;color:#5a7e86}
+    .chip.green{background:#e8f4ec;color:#56755f}
+    .chip.orange{background:#fbefe0;color:#9a6d3b}
+    .chip.red{background:#fae7e7;color:#9c4f4f}
+
+    .muted-block{
+      font-size:13px;
+      color:var(--muted);
+      line-height:1.45;
+      margin-top:8px;
+    }
+
+    .tiny-actions{display:flex;gap:6px;flex-wrap:wrap}
+
+    .empty{
+      border:1px dashed #d9cbc4;
+      border-radius:16px;
+      padding:16px;
+      text-align:center;
+      color:var(--muted);
+      background:#fbf8f6;
+    }
+
+    .form-grid{
+      display:grid;
+      gap:10px;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .form-grid.three{
+      grid-template-columns:repeat(3,minmax(0,1fr));
+    }
+
+    .field{display:grid;gap:6px}
+    label{
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+
+    input,select,textarea{
+      width:100%;
+      background:#fff;
+      color:var(--text);
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px 11px;
+      outline:none;
+    }
+    textarea{min-height:84px;resize:vertical}
+    input:focus,select:focus,textarea:focus{
+      border-color:var(--accent);
+      box-shadow:0 0 0 3px rgba(147,183,190,.16);
+    }
+
+    .calendar-wrap{
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:18px;
+      background:#fff;
+    }
+
+    .calendar-grid{
+      display:grid;
+      grid-template-columns:84px repeat(5,minmax(180px,1fr));
+      min-width:1040px;
+      position:relative;
+    }
+
+    .calendar-week-picker{
+      width:160px;
+      min-width:160px;
+    }
+
+    .cal-head{
+      position:sticky;
+      top:0;
+      z-index:3;
+      background:#f6f2ef;
+      border-bottom:1px solid var(--line);
+      padding:9px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .time-cell{
+      height:var(--slot-h);
+      padding:0 7px;
+      border-bottom:1px solid #efe5df;
+      color:var(--muted);
+      font-size:11px;
+      background:#fcfaf8;
+      display:flex;
+      align-items:flex-start;
+      justify-content:flex-start;
+      line-height:1;
+      padding-top:4px;
+    }
+
+    .slot{
+      height:var(--slot-h);
+      border-left:1px solid #efe5df;
+      border-bottom:1px solid #efe5df;
+      cursor:crosshair;
+      background:white;
+    }
+    .slot:hover{background:#f7fbfb}
+
+    .event-layer{
+      position:absolute;
+      left:84px;
+      right:0;
+      top:0;
+      display:grid;
+      grid-template-columns:repeat(5,1fr);
+      pointer-events:none;
+    }
+
+    .day-column{
+      position:relative;
+      min-height:100%;
+    }
+
+    .event-block{
+      position:absolute;
+      left:7px;
+      right:7px;
+      border-radius:14px;
+      padding:0 12px;
+      color:white;
+      box-shadow:0 8px 18px rgba(69,69,69,.12);
+      pointer-events:auto;
+      overflow:hidden;
+      border:none;
+      display:flex;
+      align-items:center;
+    }
+    .event-block.interrupted{
+      background:linear-gradient(180deg,#b7927e 0%, #9b7a68 100%);
+    }
+
+    .event-block.type-work-item{
+      background:linear-gradient(180deg,#93B7BE 0%, #80a8b0 100%);
+    }
+
+    .event-block.type-databricks{
+      background:linear-gradient(180deg,#785964 0%, #5f4751 100%);
+    }
+
+    .event-block.type-epic-project{
+      background:linear-gradient(180deg,#D5C7BC 0%, #b9a69a 100%);
+      color:#454545;
+    }
+    .event-block.type-epic-project .event-action-btn{
+      color:#454545;
+      background:rgba(69,69,69,.12);
+    }
+    .event-block.type-epic-project .event-action-btn:hover{
+      background:rgba(69,69,69,.22);
+    }
+
+    .event-block.type-meeting{
+      background:linear-gradient(180deg,#6ea58a 0%, #5c8f76 100%);
+    }
+
+    .event-block.type-coworker-support{
+      background:linear-gradient(180deg,#c28b54 0%, #a87443 100%);
+    }
+
+    .event-block.type-admin{
+      background:linear-gradient(180deg,#6f6f6f 0%, #565656 100%);
+    }
+
+    .event-block.type-other{
+      background:linear-gradient(180deg,#8f7aa8 0%, #75638b 100%);
+    }
+
+    .event-block.interrupted{
+      filter:brightness(.9);
+    }
+
+    .event-content{
+      min-width:0;
+      width:100%;
+      padding-right:82px;
+      display:flex;
+      flex-direction:column;
+      justify-content:center;
+    }
+
+    .event-title{
+      font-weight:800;
+      font-size:13px;
+      line-height:1.1;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .event-subtitle{
+      margin-top:2px;
+      font-size:10px;
+      line-height:1.1;
+      opacity:.92;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+
+    .event-actions{
+      position:absolute;
+      top:50%;
+      right:6px;
+      transform:translateY(-50%);
+      display:flex;
+      gap:3px;
+      opacity:0;
+      pointer-events:none;
+      transition:.15s ease;
+    }
+
+    .event-block.tall{
+      align-items:flex-start;
+      padding-top:10px;
+      padding-bottom:12px;
+    }
+    .event-block.short .event-subtitle{
+      display:none;
+    }
+
+    .event-block.short .event-content{
+      padding-right:82px;
+    }
+    .event-block.tall .event-content{
+      justify-content:flex-start;
+    }
+    .event-block.tall .event-actions{
+      top:8px;
+      right:8px;
+      transform:none;
+    }
+
+    .event-block:hover .event-actions{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .event-action-btn{
+      width:20px;
+      height:20px;
+      border:none;
+      border-radius:6px;
+      background:rgba(69,69,69,.28);
+      color:white;
+      display:grid;
+      place-items:center;
+      cursor:pointer;
+      font-size:11px;
+      line-height:1;
+      padding:0;
+    }
+    .event-action-btn:hover{
+      background:rgba(69,69,69,.46);
+    }
+
+    .resize-handle{
+      position:absolute;
+      left:0;
+      right:0;
+      bottom:0;
+      height:7px;
+      cursor:ns-resize;
+      background:linear-gradient(180deg,transparent,rgba(255,255,255,.18));
+    }
+
+    .metric-grid{
+      display:grid;
+      gap:10px;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+    }
+
+    .metric{
+      background:linear-gradient(180deg,#ffffff 0%, #faf6f3 100%);
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:13px;
+    }
+    .metric .label{
+      color:var(--muted);
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+    }
+    .metric .value{
+      font-size:27px;
+      font-weight:800;
+      margin-top:6px;
+      color:var(--charcoal);
+    }
+
+    .drawer-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(69,69,69,.22);
+      opacity:0;
+      pointer-events:none;
+      transition:.18s ease;
+      z-index:40;
+    }
+    .drawer-backdrop.open{
+      opacity:1;
+      pointer-events:auto;
+    }
+
+    .drawer{
+      position:fixed;
+      top:0;
+      right:0;
+      width:min(560px,100vw);
+      height:100vh;
+      background:#fff;
+      border-left:1px solid var(--line);
+      box-shadow:-18px 0 36px rgba(69,69,69,.12);
+      transform:translateX(100%);
+      transition:.18s ease;
+      z-index:41;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+    }
+    .drawer.open{transform:translateX(0)}
+
+    .drawer-head,.drawer-foot{
+      padding:14px;
+      border-bottom:1px solid var(--line);
+    }
+    .drawer-foot{
+      border-bottom:none;
+      border-top:1px solid var(--line);
+    }
+    .drawer-body{
+      padding:14px;
+      overflow:auto;
+      display:grid;
+      gap:14px;
+      background:#fcfbfa;
+    }
+
+    .section-title{
+      font-size:11px;
+      color:var(--muted);
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+
+    .note-card{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background:white;
+    }
+
+    .note-date{
+      font-size:11px;
+      color:var(--muted);
+      margin-bottom:5px;
+    }
+
+    .project-row{
+    display:grid;
+    grid-template-columns:44px minmax(0,1.5fr) 130px 140px auto;
+    gap:12px;
+    align-items:center;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:12px;
+    background:white;
+    cursor:grab;
+    }
+    .project-row.done{opacity:.62}
+    .project-row.dragging{opacity:.55}
+
+    .project-order-badge{
+    width:32px;
+    height:32px;
+    border-radius:10px;
+    background:var(--accent-soft);
+    color:var(--charcoal);
+    display:grid;
+    place-items:center;
+    font-size:12px;
+    font-weight:800;
+    }
+
+    .work-toolbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      flex-wrap:wrap;
+      margin-bottom:14px;
+    }
+
+    .toolbar-left,.toolbar-right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+
+    .filter-group{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    align-items:flex-end;
+    }
+
+    .work-list{
+      display:grid;
+      gap:10px;
+    }
+
+    .work-list-item{
+      background:linear-gradient(180deg,#ffffff 0%, #faf7f5 100%);
+      border:1px solid var(--line);
+      border-radius:18px;
+      padding:14px;
+      display:grid;
+      grid-template-columns:44px 1.2fr .8fr .9fr .8fr auto;
+      gap:12px;
+      align-items:center;
+      cursor:grab;
+      box-shadow:var(--shadow);
+      transition:.15s ease;
+    }
+    .work-list-item:hover{transform:translateY(-1px)}
+    .work-list-item.dragging{opacity:.55}
+
+    .work-list-rank{
+      width:36px;
+      height:36px;
+      border-radius:12px;
+      background:var(--accent-soft);
+      display:grid;
+      place-items:center;
+      font-weight:800;
+      color:var(--charcoal);
+    }
+
+    .work-main-title{
+      font-weight:800;
+      font-size:15px;
+      color:var(--charcoal);
+    }
+    .work-main-sub{
+      font-size:12px;
+      color:var(--muted);
+      margin-top:4px;
+    }
+
+    .work-meta-block{
+      display:grid;
+      gap:4px;
+    }
+    .work-meta-label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+    .work-meta-value{
+      font-size:13px;
+      color:var(--charcoal);
+      font-weight:600;
+    }
+
+    .status-select{
+      width:170px;
+    }
+
+    .work-time{
+      font-size:20px;
+      font-weight:800;
+      color:var(--priority);
+    }
+    .work-time-sub{
+      font-size:11px;
+      color:var(--muted);
+    }
+
+    .work-detail-page{display:none}
+    .work-detail-page.active{display:block}
+
+    .detail-header{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+      align-items:flex-start;
+      margin-bottom:14px;
+    }
+    .detail-header-left{
+      display:grid;
+      gap:8px;
+    }
+    .detail-title{
+      font-size:24px;
+      font-weight:800;
+      color:var(--charcoal);
+    }
+
+    .detail-summary-grid{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:10px;
+      margin-bottom:14px;
+    }
+
+    .detail-stat{
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:#fff;
+      padding:12px;
+    }
+    .detail-stat-label{
+      font-size:11px;
+      text-transform:uppercase;
+      letter-spacing:.06em;
+      color:var(--muted);
+    }
+    .detail-stat-value{
+      font-size:18px;
+      font-weight:800;
+      color:var(--charcoal);
+      margin-top:6px;
+    }
+
+    .progress-wrap{
+      display:grid;
+      gap:6px;
+    }
+    .progress-bar{
+      width:100%;
+      height:10px;
+      border-radius:999px;
+      background:#ece4df;
+      overflow:hidden;
+    }
+    .progress-fill{
+      height:100%;
+      background:linear-gradient(90deg,var(--accent), #7ea9b1);
+      border-radius:999px;
+    }
+    .progress-label{
+      font-size:12px;
+      color:var(--muted);
+      font-weight:600;
+    }
+
+    .detail-description-full{
+      margin-bottom:14px;
+    }
+
+    .child-task-header{
+    display:grid;
+    grid-template-columns: minmax(0, 1.9fr) 160px 120px 160px;
+    gap:12px;
+    padding:0 12px 6px 12px;
+    color:var(--muted);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    align-items:end;
+    }
+    .child-task-header .col-scheduled,
+    .child-task-header .col-time{
+    text-align:center;
+    }
+    .child-task-header .col-actions{
+    text-align:right;
+    }
+
+    .child-task-row{
+    display:grid;
+    grid-template-columns: minmax(0, 1.9fr) 160px 120px 160px;
+    gap:12px;
+    align-items:center;
+    padding:10px 12px;
+    border:1px solid var(--line);
+    border-radius:12px;
+    background:#fff;
+    cursor:grab;
+    }
+    .child-task-row.done{
+    background:#f2efed;
+    opacity:.68;
+    }
+    .child-task-row.dragging{
+    opacity:.55;
+    }
+
+    .child-task-main{
+    display:grid;
+    grid-template-columns: 24px 18px minmax(0,1fr);
+    align-items:center;
+    gap:8px;
+    min-width:0;
+    }
+
+    .child-order-badge{
+    width:24px;
+    height:24px;
+    border-radius:8px;
+    background:var(--accent-soft);
+    color:var(--charcoal);
+    display:grid;
+    place-items:center;
+    font-size:11px;
+    font-weight:800;
+    }
+
+    .child-task-checkbox{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    }
+    .child-task-checkbox input{
+    width:14px;
+    height:14px;
+    margin:0;
+    }
+
+    .child-task-name-wrap{
+    min-width:0;
+    }
+
+    .child-task-name{
+    font-weight:700;
+    line-height:1.15;
+    font-size:13px;
+    word-break:break-word;
+    }
+
+    .child-task-status-cell{
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    }
+
+    .child-task-status-pill{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    padding:4px 8px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:700;
+    border:1px solid var(--line);
+    background:#faf7f5;
+    color:var(--muted);
+    white-space:nowrap;
+    }
+    .child-task-status-pill.scheduled{
+    background:#e7f1f2;
+    color:#5a7e86;
+    }
+
+    .child-task-hours{
+    font-weight:800;
+    color:var(--priority);
+    white-space:nowrap;
+    text-align:center;
+    font-size:13px;
+    }
+
+    .child-task-actions{
+    display:flex;
+    justify-content:flex-end;
+    align-items:center;
+    gap:4px;
+    flex-wrap:nowrap;
+    }
+
+    .compact-child-btn{
+    padding:6px 9px;
+    font-size:11px;
+    border-radius:10px;
+    }
+
+    .notes-block{
+      margin-top:14px;
+    }
+
+    .center-modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(69,69,69,.28);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      z-index:60;
+    }
+    .center-modal-backdrop.open{display:flex}
+
+    .center-modal{
+      width:min(760px,100%);
+      max-height:90vh;
+      overflow:auto;
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:0 20px 50px rgba(69,69,69,.18);
+    }
+    .center-modal-head,
+    .center-modal-body,
+    .center-modal-foot{
+      padding:16px 18px;
+    }
+    .center-modal-head{border-bottom:1px solid var(--line)}
+    .center-modal-foot{
+      border-top:1px solid var(--line);
+      display:flex;
+      justify-content:flex-end;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-section-label" id="sidebarAppTitle">Work Command Center</div>
+      <div class="nav" id="sideNav"></div>
+
+      <div class="sidebar-card" id="quickFocusBox"></div>
+    </aside>
+
+    <main class="main">
+      <div class="topbar">
+        <h1 id="pageTitle">Dashboard</h1>
+        <div class="topbar-right">
+          <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+          <div class="settings-menu" id="settingsMenu">
+            <button class="menu-btn" id="seedDemoBtn">Load Demo Data</button>
+            <button class="menu-btn" id="exportBtn">Export Backup</button>
+            <label class="menu-btn" for="importFile" style="display:block;cursor:pointer;">Import Backup</label>
+            <input id="importFile" type="file" accept="application/json" hidden />
+            <button class="menu-btn" id="resetBtn">Reset App</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="content">
+        <section class="view active" data-view="dashboard">
+          <div class="grid dash-grid">
+            <div class="panel tinted">
+              <div class="panel-head">
+                <div>
+                  <h2>Today’s Priorities</h2>
+                </div>
+                <button class="btn small primary" id="newWorkBtnA">Quick Add Work</button>
+              </div>
+              <div id="todayPriorities" class="card-list"></div>
+            </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Oldest Tasks</h2>
+          </div>
+          <div class="tiny-actions">
+            <button class="btn small" onclick="addReminderNote()">+ Add Note</button>
+          </div>
+        </div>
+        <div id="remindersList" class="card-list"></div>
+      </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Epic Project</h2>
+                </div>
+                <button class="btn small" data-go-tab="epic-project">Open Project</button>
+              </div>
+              <div id="epicFocus" class="card-list"></div>
+            </div>
+          </div>
+
+            <div style="margin-top:14px;">
+            <div class="panel">
+                <div class="panel-head">
+                <div>
+                    <h2>This Week’s Calendar</h2>
+                </div>
+                <div class="tiny-actions">
+                  <button class="btn small" id="toggleCalendarViewBtn">Show All</button>
+                  <input type="date" id="calendarWeekPicker" class="calendar-week-picker" />
+                  <button class="btn small" id="currentWeekBtn">Current Week</button>
+                </div>
+                </div>
+                <div class="subtle" id="weekLabel" style="margin-bottom:10px;"></div>
+                <div class="calendar-wrap">
+                <div id="calendarGrid" class="calendar-grid"></div>
+                </div>
+            </div>
+
+            <div class="panel" style="margin-top:14px;">
+                <div class="panel-head">
+                <div>
+                    <h2>Weekly Time Summary</h2>
+                    <div class="subtle">Where your time actually went.</div>
+                </div>
+                </div>
+                <div id="weeklySummary" class="card-list"></div>
+            </div>
+            </div>
+        </section>
+
+        <section class="view" data-view="work-items">
+          <div id="workItemsMainView">
+            <div class="work-toolbar">
+              <div class="toolbar-left">
+                <button class="btn primary" id="openCreateWorkModalBtn">+ Create Work Item</button>
+              </div>
+
+              <div class="toolbar-right">
+                <div class="filter-group" id="statusFilterGroup"></div>
+                <div class="filter-group" id="typeFilterGroup"></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Work Items</h2>
+                </div>
+              </div>
+              <div id="workList" class="work-list"></div>
+            </div>
+          </div>
+
+          <div id="workItemDetailPage" class="work-detail-page"></div>
+        </section>
+
+        <section class="view" data-view="epic-project">
+        <div class="work-toolbar" style="margin-bottom:14px;">
+          <div class="toolbar-left">
+            <button class="btn primary" id="openEpicStepModalBtn">+ Add Project Step</button>
+          </div>
+        </div>
+
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Current + Next Steps</h2>
+               </div>
+            </div>
+          <div id="epicNextSteps" class="card-list"></div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h2>Project Snapshot</h2>
+               </div>
+            </div>
+            <div id="epicSnapshot" class="card-list"></div>
+          </div>
+        </div>
+
+        <div class="panel" style="margin-top:14px;">
+          <div class="panel-head">
+            <div>
+              <h2>All Project Steps</h2>
+              </div>
+            </div>
+            <div id="epicStepsList" class="stack"></div>
+          </div>
+        </section>
+
+        <section class="view" data-view="leadership">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h2>Bi-Weekly 1:1 Snapshot</h2>
+              </div>
+            </div>
+            <div id="leadershipMetrics" class="metric-grid"></div>
+          </div>
+
+          <div class="grid two-col" style="margin-top:14px;">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Completed Since Last 1:1</h2>
+                </div>
+              </div>
+              <div id="leadershipCompleted" class="card-list"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Current Priorities</h2>
+                </div>
+              </div>
+              <div id="leadershipCurrentPriorities" class="card-list"></div>
+            </div>
+          </div>
+
+          <div class="grid two-col" style="margin-top:14px;">
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Blockers / Waiting</h2>
+                </div>
+              </div>
+              <div id="leadershipBlockers" class="card-list"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-head">
+                <div>
+                  <h2>Time Breakdown, Last 14 Days</h2>
+                </div>
+              </div>
+              <div id="leadershipTimeBreakdown" class="card-list"></div>
+            </div>
+          </div>
+
+          <div class="panel" style="margin-top:14px;">
+            <div class="panel-head">
+              <div>
+                <h2>Help Needed / Talking Points</h2>
+              </div>
+            </div>
+            <div id="leadershipNarrative" class="card-list"></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="drawer" id="drawer">
+    <div class="drawer-head">
+      <div class="panel-head" style="margin:0">
+        <div>
+          <h2 id="drawerTitle">Details</h2>
+          <div class="subtle" id="drawerSubtitle"></div>
+        </div>
+        <button class="btn small" id="closeDrawerBtn">Close</button>
+      </div>
+    </div>
+    <div class="drawer-body" id="drawerBody"></div>
+    <div class="drawer-foot">
+      <div class="tiny-actions" id="drawerActions"></div>
+    </div>
+  </aside>
+
+  <div class="center-modal-backdrop" id="createWorkModalBackdrop">
+    <div class="center-modal">
+      <div class="center-modal-head">
+        <div class="panel-head" style="margin:0">
+          <div>
+            <h2>Create Work Item</h2>
+            <div class="subtle">Add a new parent work item. Child tasks come from the selected template.</div>
+          </div>
+          <button class="btn small" id="closeCreateWorkModalBtn">Close</button>
+        </div>
+      </div>
+
+      <form id="createWorkModalForm">
+        <div class="center-modal-body stack">
+          <div class="form-grid">
+            <div class="field">
+              <label>Title</label>
+              <input id="mw_title" required />
+            </div>
+            <div class="field">
+              <label>Template</label>
+              <select id="mw_template">
+                <option value="custom">Custom / No Template</option>
+                <option value="ad-hoc">Ad-hoc Request</option>
+                <option value="report-dashboard">Report / Dashboard Request</option>
+                <option value="databricks">Databricks Conversion</option>
+                <option value="epic-tool">Epic Tool</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-grid three">
+            <div class="field">
+              <label>Type</label>
+              <select id="mw_type">
+                <option>Dashboard</option>
+                <option>Report</option>
+                <option>Epic Tool</option>
+                <option>Databricks</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Status</label>
+              <select id="mw_status"></select>
+            </div>
+            <div class="field">
+              <label>Optional Due Date</label>
+              <input type="date" id="mw_dueDate" />
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>Service Line</label>
+              <input id="mw_serviceLine" placeholder="Ex: Pediatrics, Heart, Women’s, Surgery" />
+            </div>
+            <div class="field">
+              <label>Customer Name</label>
+              <input id="mw_customerName" placeholder="Customer / requester name" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Description</label>
+            <textarea id="mw_description"></textarea>
+          </div>
+
+          <div class="field">
+            <label>Initial Note</label>
+            <textarea id="mw_initialNote"></textarea>
+          </div>
+        </div>
+
+        <div class="center-modal-foot">
+          <button type="button" class="btn" id="cancelCreateWorkModalBtn">Cancel</button>
+          <button type="submit" class="btn primary">Create Work Item</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+    <div class="center-modal-backdrop" id="epicStepModalBackdrop">
+    <div class="center-modal">
+        <div class="center-modal-head">
+        <div class="panel-head" style="margin:0">
+            <div>
+            <h2>Add Epic Project Step</h2>
+            <div class="subtle">Add a new manually tracked step for the Epic Catalog project.</div>
+            </div>
+            <button class="btn small" id="closeEpicStepModalBtn">Close</button>
+        </div>
+        </div>
+
+        <form id="epicStepForm">
+        <div class="center-modal-body stack">
+            <div class="form-grid">
+            <div class="field">
+                <label>Step Name</label>
+                <input id="epicStepName" required placeholder="Ex: Validate inpatient template inventory" />
+            </div>
+            <div class="field">
+                <label>Status</label>
+                <select id="epicStepStatus">
+                <option>Not Started</option>
+                <option>In Progress</option>
+                <option>Blocked</option>
+                <option>Done</option>
+                </select>
+            </div>
+            </div>
+
+            <div class="form-grid three">
+            <div class="field">
+                <label>Phase</label>
+                <input id="epicStepPhase" placeholder="Ex: Inventory / Consolidate / Validate" />
+            </div>
+            <div class="field">
+                <label>Owner</label>
+                <input id="epicStepOwner" placeholder="Usually you" />
+            </div>
+            <div class="field">
+                <label>Blocked Reason</label>
+                <input id="epicStepBlocked" placeholder="Optional" />
+            </div>
+            </div>
+
+            <div class="field">
+            <label>Notes</label>
+            <textarea id="epicStepNotes" placeholder="What matters about this step?"></textarea>
+            </div>
+        </div>
+
+        <div class="center-modal-foot">
+            <button type="button" class="btn" id="cancelEpicStepModalBtn">Cancel</button>
+            <button type="submit" class="btn primary">Add Project Step</button>
+        </div>
+        </form>
+    </div>
+    </div>
+
+  <script>
+    const STORAGE_KEY = 'work-command-center-v2-fixed-merged-child-dnd';
+    const STATUSES = [
+      'Not Started',
+      'Waiting on Customer',
+      'Build In Progress',
+      'In Validation',
+      'Ready for Promotion',
+      'Waiting on Data Management',
+      'Done',
+      'Deferred'
+    ];
+    const WORKWEEK_DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const FULLWEEK_DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    const START_MINUTES = 7 * 60 + 30;
+    const SLOT_MINUTES = 30;
+    const SLOT_HEIGHT = 28;
+
+    function getCalendarDays(){
+      return state.calendarExpanded ? FULLWEEK_DAYS : WORKWEEK_DAYS;
+    }
+
+    function getCalendarEndMinutes(){
+      return state.calendarExpanded ? 21 * 60 : 17 * 60;
+    }
+
+    function getCalendarSlotCount(){
+      return (getCalendarEndMinutes() - START_MINUTES) / SLOT_MINUTES;
+    }
+
+    const state = loadState();
+    let drawerEntityId = null;
+    let dragCreate = null;
+    let resizeState = null;
+
+    function loadState(){
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw){
+        const parsed = JSON.parse(raw);
+        if (!parsed.workItemsStatusFilter) parsed.workItemsStatusFilter = 'active';
+        if (!parsed.workItemsTypeFilter) parsed.workItemsTypeFilter = 'all';
+        if (typeof parsed.calendarExpanded !== 'boolean') parsed.calendarExpanded = false;
+        if (!parsed.reminderNotes) parsed.reminderNotes = [];
+        if (!parsed.workItems) parsed.workItems = [];
+        if (!parsed.calendarEntries) parsed.calendarEntries = [];
+        if (!parsed.epicProject) parsed.epicProject = {steps:[]};
+        if (!parsed.epicProject.steps) parsed.epicProject.steps = [];
+        parsed.epicProject.steps.forEach((step, idx) => {
+          if (typeof step.order !== 'number') step.order = idx + 1;
+          if (!step.createdAt) step.createdAt = new Date().toISOString();
+          if (typeof step.completedAt === 'undefined') step.completedAt = '';
+          if (typeof step.statusChangedAt === 'undefined') step.statusChangedAt = step.createdAt;
+          if (typeof step.blockedAt === 'undefined') step.blockedAt = '';
+        });
+        parsed.epicProject.steps.sort((a,b)=>(a.order ?? 999) - (b.order ?? 999));
+
+        parsed.workItems.forEach(item => {
+          if (!item.children) item.children = [];
+          if (!item.history) item.history = [];
+
+          if (!item.createdAt) item.createdAt = new Date().toISOString();
+          if (!item.updatedAt) item.updatedAt = item.createdAt;
+          if (typeof item.completedAt === 'undefined') item.completedAt = '';
+          if (typeof item.statusChangedAt === 'undefined') item.statusChangedAt = item.updatedAt;
+          if (typeof item.blockedAt === 'undefined') item.blockedAt = '';
+
+          item.children.forEach((child, idx) => {
+            if (!child.id) child.id = uid('child');
+            if (typeof child.order !== 'number') child.order = idx + 1;
+            if (typeof child.completedAt === 'undefined') child.completedAt = '';
+          });
+
+          normalizeChildOrder(item);
+        });
+
+        parsed.calendarEntries.forEach(entry => {
+          if (typeof entry.childTaskId === 'undefined') entry.childTaskId = '';
+        });
+
+        return parsed;
+      }
+      return {
+        activeTab:'dashboard',
+        currentWeekOffset:0,
+        calendarExpanded:false,
+        workItems:[],
+        calendarEntries:[],
+        epicProject:{steps:[]},
+        reminderNotes:[],
+        workItemsStatusFilter:'active',
+        workItemsTypeFilter:'all'
+      };
+    }
+
+    function saveState(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); }
+    function uid(prefix='id'){ return `${prefix}-${Math.random().toString(36).slice(2,9)}-${Date.now().toString(36)}`; }
+
+    function esc(s=''){
+      return String(s)
+        .replaceAll('&','&amp;')
+        .replaceAll('<','&lt;')
+        .replaceAll('>','&gt;')
+        .replaceAll('"','&quot;')
+        .replaceAll("'",'&#039;');
+    }
+
+    function dateInputValue(date){
+      const d = new Date(date);
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0,10);
+    }
+
+    function datetimeToDateInputValue(dateStr){
+      if (!dateStr) return '';
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return '';
+      d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+      return d.toISOString().slice(0,10);
+    }
+
+    function formatDate(dateStr){
+      if (!dateStr) return 'No due date';
+      return new Date(dateStr + 'T00:00:00').toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+    }
+
+    function shortDate(date){
+      return new Date(date).toLocaleDateString(undefined,{month:'short',day:'numeric'});
+    }
+
+    function timeToMinutes(t){
+      const [h,m] = t.split(':').map(Number);
+      return h*60+m;
+    }
+
+    function minutesToInput(m){
+      return `${String(Math.floor(m/60)).padStart(2,'0')}:${String(m%60).padStart(2,'0')}`;
+    }
+
+    function formatTime(mins){
+      const h24 = Math.floor(mins/60), m = mins%60;
+      const suffix = h24 >= 12 ? 'PM' : 'AM';
+      const h12 = ((h24 + 11) % 12) + 1;
+      return `${h12}:${String(m).padStart(2,'0')} ${suffix}`;
+    }
+
+    function startOfWeek(date){
+      const d = new Date(date);
+      const day = d.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      d.setDate(d.getDate() + diff);
+      d.setHours(0,0,0,0);
+      return d;
+    }
+
+    function weekDates(offset=0){
+      const ws = startOfWeek(new Date());
+      ws.setDate(ws.getDate() + offset*7);
+
+      const days = getCalendarDays();
+      const startOffset = state.calendarExpanded ? -1 : 0;
+
+      return days.map((_,i)=>{
+        const d = new Date(ws);
+        d.setDate(ws.getDate() + startOffset + i);
+        return d;
+      });
+    }
+
+    function getWeekOffsetFromDate(selectedDate){
+      const selectedWeekStart = startOfWeek(new Date(selectedDate));
+      const currentWeekStart = startOfWeek(new Date());
+      const diffMs = selectedWeekStart.getTime() - currentWeekStart.getTime();
+      return Math.round(diffMs / (7 * 24 * 60 * 60 * 1000));
+    }
+
+    function syncCalendarWeekPicker(){
+      const picker = document.getElementById('calendarWeekPicker');
+      if (!picker) return;
+
+      const displayedWeekStart = startOfWeek(new Date());
+      displayedWeekStart.setDate(displayedWeekStart.getDate() + state.currentWeekOffset * 7);
+      picker.value = dateInputValue(displayedWeekStart);
+    }
+
+    function goToSelectedWeek(){
+      const picker = document.getElementById('calendarWeekPicker');
+      if (!picker || !picker.value) return;
+
+      state.currentWeekOffset = getWeekOffsetFromDate(picker.value);
+      saveState();
+      renderDashboard();
+      renderLeadership();
+    }
+
+    function templates(){
+      return {
+        'ad-hoc':[
+          'Review request details',
+          'Inital Customer Meeting',
+          'Build work',
+          'Validation',
+          'Documentation'
+        ],
+        'report-dashboard':[
+          'Review request details',
+          'Inital Customer Meeting',
+          'Build work',
+          'Validation',
+          'Documentation',
+          'Data.World / Promotion Pal',
+          'Change Management'
+        ],
+        'databricks':[
+          'Review & Translate logic',
+          'Validate against SQL Server output',
+          'Refine / enhance logic',
+          'Data.World / Promotion Pal',
+          'Change Management',
+        ],
+        'epic-tool':[
+          'Review request details',
+          'Build work',
+          'Validation',
+          'Review with customer',
+          'Documentation',
+          'Change Management'
+        ]
+      };
+    }
+
+    function normalizeChildOrder(item){
+      item.children
+        .sort((a,b)=>(a.order ?? 999) - (b.order ?? 999))
+        .forEach((child, idx) => {
+          child.order = idx + 1;
+        });
+    }
+
+    function getOrderedChildren(item){
+      return [...item.children].sort((a,b)=>(a.order ?? 999) - (b.order ?? 999));
+    }
+
+    function normalizeEpicStepOrder(){
+    state.epicProject.steps
+        .sort((a,b)=>(a.order ?? 999) - (b.order ?? 999))
+        .forEach((step, idx) => {
+        step.order = idx + 1;
+        });
+    }
+
+    function getOrderedEpicSteps(){
+    return [...state.epicProject.steps].sort((a,b)=>(a.order ?? 999) - (b.order ?? 999));
+    }
+
+    function getActiveOrderedEpicSteps(){
+    return getOrderedEpicSteps().filter(step => step.status !== 'Done');
+    }
+
+    function getPageTitle(){
+    switch(state.activeTab){
+        case 'dashboard':
+        return 'Dashboard';
+        case 'work-items':
+        return 'Work Items';
+        case 'epic-project':
+        return 'Epic Project';
+        case 'leadership':
+          return '1:1 Summary';
+        default:
+        return 'Dashboard';
+    }
+    }
+
+    function getCurrentChildTask(item){
+      const ordered = getOrderedChildren(item);
+      return ordered.find(c => !c.done) || null;
+    }
+
+    function isPromotionProcessTask(taskName){
+      return [
+        'Data.World / Promotion Pal',
+        'Change Management'
+      ].includes(taskName);
+    }
+
+    function workItemIsReadyForPromotion(item){
+      if (!item || !item.children || !item.children.length) return false;
+
+      const orderedChildren = getOrderedChildren(item);
+
+      const documentationIndex = orderedChildren.findIndex(
+        child => child.name === 'Documentation'
+      );
+
+      if (documentationIndex === -1) return false;
+
+      const throughDocumentation = orderedChildren.slice(0, documentationIndex + 1);
+      return throughDocumentation.every(child => child.done);
+    }
+
+    function setWorkItemStatusWithTracking(item, newStatus){
+      if (!item) return;
+
+      const oldStatus = item.status;
+      const now = new Date().toISOString();
+
+      if (oldStatus !== newStatus){
+        item.status = newStatus;
+        item.statusChangedAt = now;
+      }
+
+      if (newStatus === 'Done'){
+        item.completedAt = now;
+        item.blockedAt = '';
+      } else {
+        if (oldStatus === 'Done' && item.completedAt){
+          item.completedAt = '';
+        }
+
+        if (newStatus === 'Waiting on Customer' || newStatus === 'Waiting on Data Management'){
+          if (!item.blockedAt || oldStatus !== newStatus){
+            item.blockedAt = now;
+          }
+        } else {
+          item.blockedAt = '';
+        }
+      }
+
+      item.updatedAt = now;
+    }
+
+    function refreshWorkItemStatusFromChildTasks(item){
+    if (!item || !item.children || !item.children.length) return;
+
+    const orderedChildren = getOrderedChildren(item);
+    const allDone = orderedChildren.every(child => child.done);
+
+    if (allDone){
+        setWorkItemStatusWithTracking(item, 'Done');
+        return;
+    }
+
+    if (workItemIsReadyForPromotion(item)){
+        setWorkItemStatusWithTracking(item, 'Ready for Promotion');
+        return;
+    }
+
+    const validationTask = orderedChildren.find(child => child.name === 'Validation');
+    const documentationTask = orderedChildren.find(child => child.name === 'Documentation');
+
+    if (documentationTask?.done || validationTask?.done){
+        setWorkItemStatusWithTracking(item, 'In Validation');
+        return;
+    }
+
+    const anyStarted = orderedChildren.some(child => child.done);
+
+    if (anyStarted){
+        setWorkItemStatusWithTracking(item, 'Build In Progress');
+        return;
+    }
+
+    setWorkItemStatusWithTracking(item, 'Not Started');
+    }
+
+    function getAppointmentTypeClass(appointmentType){
+      switch(appointmentType){
+        case 'Work Item':
+          return 'type-work-item';
+        case 'Databricks':
+          return 'type-databricks';
+        case 'Epic Project':
+          return 'type-epic-project';
+        case 'Meeting':
+          return 'type-meeting';
+        case 'Coworker Support':
+          return 'type-coworker-support';
+        case 'Admin':
+          return 'type-admin';
+        default:
+          return 'type-other';
+      }
+    }
+
+    function getLongestUntouchedWorkItems(limit=3){
+      const priorityIds = new Set(todayPriorities().map(item => item.id));
+
+      return [...state.workItems]
+        .filter(w => w.status !== 'Done' && w.status !== 'Deferred')
+        .filter(w => !priorityIds.has(w.id))
+        .sort((a,b)=>{
+          const aTouched = new Date((a.history && a.history[0]?.date) || a.updatedAt || a.createdAt || 0).getTime();
+          const bTouched = new Date((b.history && b.history[0]?.date) || b.updatedAt || b.createdAt || 0).getTime();
+          return aTouched - bTouched;
+        })
+        .slice(0, limit);
+    }
+
+    function addReminderNote(){
+      const text = prompt('Enter a reminder note:');
+      if (!text || !text.trim()) return;
+
+      state.reminderNotes.unshift({
+        id: uid('rem'),
+        text: text.trim(),
+        createdAt: new Date().toISOString()
+      });
+
+      saveState();
+      renderDashboard();
+    }
+
+    function deleteReminderNote(noteId){
+      state.reminderNotes = state.reminderNotes.filter(n => n.id !== noteId);
+      saveState();
+      renderDashboard();
+    }
+
+    function getAppointmentTypes(){
+      return [
+        'Work Item',
+        'Databricks',
+        'Epic Project',
+        'Meeting',
+        'Coworker Support',
+        'Admin',
+        'Other'
+      ];
+    }
+
+    function getWorkItemsForAppointmentType(type){
+      const activeItems = state.workItems.filter(w => w.status !== 'Done');
+
+      if (type === 'Databricks'){
+        return activeItems.filter(w => w.type === 'Databricks');
+      }
+
+      if (type === 'Work Item'){
+        return activeItems.filter(w => w.type !== 'Databricks');
+      }
+
+      return [];
+    }
+
+    function getChildTasksForWorkItem(workItemId){
+      const item = state.workItems.find(w => w.id === workItemId);
+      if (!item || !item.children) return [];
+
+      return [...item.children]
+        .filter(child => !child.done)
+        .sort((a,b)=>(a.order ?? 999) - (b.order ?? 999));
+    }
+
+    function renderSideNav(){
+      const tabs = [
+        ['dashboard','🏠','Dashboard'],
+        ['work-items','🎟️','Assignments'],
+        ['epic-project','💻','Epic Project'],
+        ['leadership','📃','Summary']
+      ];
+      const el = document.getElementById('sideNav');
+      el.innerHTML = tabs.map(([key,icon,label]) => `
+        <button class="nav-btn ${state.activeTab===key?'active':''}" data-tab="${key}">
+          <span class="nav-icon">${icon}</span>
+          <span>${label}</span>
+        </button>
+      `).join('');
+      el.querySelectorAll('[data-tab]').forEach(btn=>{
+        btn.onclick = () => {
+          state.activeTab = btn.dataset.tab;
+          saveState();
+          render();
+        };
+      });
+      document.querySelectorAll('[data-go-tab]').forEach(btn=>{
+        btn.onclick = () => {
+          state.activeTab = btn.dataset.goTab;
+          saveState();
+          render();
+        };
+      });
+    }
+
+    function showView(){
+      document.querySelectorAll('.view').forEach(v=>v.classList.toggle('active', v.dataset.view===state.activeTab));
+    }
+
+    function renderStatusOptions(){
+      document.getElementById('mw_status').innerHTML = STATUSES.map(s=>`<option>${s}</option>`).join('');
+    }
+
+    function getWorkItemsStatusFilter(){
+      if (!state.workItemsStatusFilter) state.workItemsStatusFilter = 'active';
+      return state.workItemsStatusFilter;
+    }
+
+
+
+    function getWorkItemsTypeFilter(){
+      if (!state.workItemsTypeFilter) state.workItemsTypeFilter = 'all';
+      return state.workItemsTypeFilter;
+    }
+
+    function normalizePriorities(){
+      state.workItems
+        .sort((a,b)=>Number(a.priorityLevel || 999) - Number(b.priorityLevel || 999))
+        .forEach((item,index)=>{
+          item.priorityLevel = String(index + 1);
+        });
+    }
+
+    function getWorkItemTimeMinutes(workId){
+      return state.calendarEntries
+        .filter(e => e.workItemId === workId)
+        .reduce((sum,e)=>sum + (e.endMinutes - e.startMinutes), 0);
+    }
+
+    function getWorkItemChildTimeMinutes(workId, childId){
+      return state.calendarEntries
+        .filter(e => e.workItemId === workId && e.childTaskId === childId)
+        .reduce((sum,e)=>sum + (e.endMinutes - e.startMinutes), 0);
+    }
+
+    function childTaskIsScheduled(workId, childId){
+      return state.calendarEntries.some(e => e.workItemId === workId && e.childTaskId === childId);
+    }
+
+    function hoursLabelFromMinutes(mins){
+      return `${(mins / 60).toFixed(1)} hrs`;
+    }
+
+    function getChildTasksCompletedCount(item){
+      return item.children.filter(c => c.done).length;
+    }
+
+    function renderProgressBar(completed, total){
+      const percent = total ? Math.round((completed / total) * 100) : 0;
+      return `
+        <div class="progress-wrap">
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${percent}%"></div>
+          </div>
+          <div class="progress-label">${completed}/${total} complete</div>
+        </div>
+      `;
+    }
+
+    function renderWorkItemFilters(){
+    const statusFilter = getWorkItemsStatusFilter();
+    const typeFilter = getWorkItemsTypeFilter();
+
+    const statusOptions = [
+        ['active', 'Active'],
+        ['all', 'All'],
+        ...STATUSES.map(s => [s, s])
+    ];
+
+    const typeOptions = [
+        ['all', 'All Types'],
+        ['Dashboard', 'Dashboard'],
+        ['Report', 'Report'],
+        ['Epic Tool', 'Epic Tool'],
+        ['Databricks', 'Databricks']
+    ];
+
+    document.getElementById('statusFilterGroup').innerHTML = `
+        <div class="field" style="min-width:190px;">
+        <label>Status</label>
+        <select id="workItemsStatusDropdown">
+            ${statusOptions.map(([value,label]) => `
+            <option value="${value}" ${statusFilter===value ? 'selected' : ''}>${label}</option>
+            `).join('')}
+        </select>
+        </div>
+    `;
+
+    document.getElementById('typeFilterGroup').innerHTML = `
+        <div class="field" style="min-width:190px;">
+        <label>Type</label>
+        <select id="workItemsTypeDropdown">
+            ${typeOptions.map(([value,label]) => `
+            <option value="${value}" ${typeFilter===value ? 'selected' : ''}>${label}</option>
+            `).join('')}
+        </select>
+        </div>
+    `;
+
+    document.getElementById('workItemsStatusDropdown').addEventListener('change', (e)=>{
+        setWorkItemsStatusFilter(e.target.value);
+    });
+
+    document.getElementById('workItemsTypeDropdown').addEventListener('change', (e)=>{
+        setWorkItemsTypeFilter(e.target.value);
+    });
+    }
+
+    function setWorkItemsStatusFilter(value){
+      state.workItemsStatusFilter = value;
+      saveState();
+      renderWorkItems();
+    }
+
+    function setWorkItemsTypeFilter(value){
+      state.workItemsTypeFilter = value;
+      saveState();
+      renderWorkItems();
+    }
+
+    function todayPriorities(){
+      return [...state.workItems]
+        .filter(w => !['Done','Deferred'].includes(w.status))
+        .sort((a,b)=>(Number(a.priorityLevel || 999)-Number(b.priorityLevel || 999)))
+        .slice(0,8);
+    }
+
+    function getSoonestDueWorkItem(){
+        const today = new Date();
+        today.setHours(0,0,0,0);
+
+        const itemsWithDueDates = state.workItems
+            .filter(item => item.dueDate)
+            .filter(item => item.status !== 'Done' && item.status !== 'Deferred')
+            .sort((a,b) => new Date(a.dueDate + 'T00:00:00') - new Date(b.dueDate + 'T00:00:00'));
+
+        return itemsWithDueDates.length ? itemsWithDueDates[0] : null;
+    }
+
+    function renderQuickFocus(){
+        const box = document.getElementById('quickFocusBox');
+        if (!box) return;
+
+        const item = getSoonestDueWorkItem();
+
+        if (!item){
+            box.innerHTML = '';
+            return;
+        }
+
+        const dueDate = new Date(item.dueDate + 'T00:00:00');
+        const today = new Date();
+        today.setHours(0,0,0,0);
+        const daysUntilDue = Math.floor((dueDate - today) / 86400000);
+
+        let dueText = '';
+        if (daysUntilDue < 0){
+            dueText = `Overdue • ${formatDate(item.dueDate)}`;
+        } else if (daysUntilDue === 0){
+            dueText = `Due today`;
+        } else if (daysUntilDue === 1){
+            dueText = `Due tomorrow`;
+        } else {
+            dueText = `Due in ${daysUntilDue} days • ${formatDate(item.dueDate)}`;
+        }
+
+        box.innerHTML = `
+            <div style="font-weight:700;margin-bottom:6px;">Due Soonest</div>
+            <div style="font-size:13px;font-weight:600;line-height:1.35;">${esc(item.title)}</div>
+            <div class="subtle" style="margin-top:6px;">${esc(dueText)}</div>
+        `;
+    }
+
+    function reminders(){
+      const untouchedItems = getLongestUntouchedWorkItems(3).map(item => ({
+        kind: 'workItem',
+        id: item.id,
+        title: item.title,
+        currentTask: getCurrentChildTask(item)?.name || 'All child tasks complete'
+      }));
+
+      const manualNotes = (state.reminderNotes || []).map(note => ({
+        kind: 'note',
+        id: note.id,
+        text: note.text
+      }));
+
+      return [...manualNotes, ...untouchedItems];
+    }
+
+    function renderDashboard(){
+      const pr = todayPriorities();
+      document.getElementById('todayPriorities').innerHTML = pr.length ? pr.map(item=>{
+        const currentTask = getCurrentChildTask(item);
+        return `
+          <div class="item-card priority">
+            <div class="item-top">
+              <div>
+                <div class="item-title">${esc(item.title)}</div>
+                <div class="chips">
+                  <span class="chip">${esc(item.status)}</span>
+                  <span class="chip">${esc(item.type)}</span>
+                </div>
+              </div>
+              <div class="tiny-actions">
+                <button class="btn small" onclick="goToWorkItemDetail('${item.id}')">Open</button>
+              </div>
+            </div>
+            <div class="item-top" style="margin-top:8px;">
+              <div class="muted-block" style="margin-top:0;">
+                Current task: ${esc(currentTask ? currentTask.name : 'All child tasks complete')}
+              </div>
+              <div class="muted-block" style="margin-top:0; white-space:nowrap;">
+                ${hoursLabelFromMinutes(getWorkItemTimeMinutes(item.id))}
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('') : `<div class="empty">No active work items yet.</div>`;
+
+      const rem = reminders();
+      document.getElementById('remindersList').innerHTML = rem.length ? rem.map(r => {
+        if (r.kind === 'note'){
+          return `
+            <div class="item-card reminder">
+              <div class="item-top">
+                <div>
+                  <div class="item-title">${esc(r.text)}</div>
+                </div>
+                <div class="tiny-actions">
+                  <button class="event-action-btn" title="Done" onclick="deleteReminderNote('${r.id}')">✓</button>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="item-card reminder">
+            <div class="item-top">
+              <div>
+                <div class="item-title">${esc(r.title)}</div>
+              </div>
+            </div>
+            <div class="muted-block">Current task: ${esc(r.currentTask)}</div>
+          </div>
+        `;
+      }).join('') : `<div class="empty">Nothing special to remember right now.</div>`;
+
+      const steps = state.epicProject.steps;
+      const current = steps.find(s=>s.status==='In Progress');
+      const next = steps.filter(s=>s.status==='Not Started').slice(0,3);
+      const blockers = steps.filter(s=>s.status==='Blocked').slice(0,3);
+      const cards = [];
+
+      if (current){
+        cards.push(`<div class="item-card project">
+          <div class="item-title">Current: ${esc(current.name)}</div>
+          <div class="chips"><span class="chip blue">${esc(current.phase || 'No phase')}</span><span class="chip">${esc(current.status)}</span></div>
+          <div class="muted-block">${esc(current.notes || 'No notes yet.')}</div>
+        </div>`);
+      }
+      next.forEach(s=>cards.push(`<div class="item-card project"><div class="item-title">Next: ${esc(s.name)}</div><div class="chips"><span class="chip">${esc(s.phase || 'No phase')}</span></div></div>`));
+      blockers.forEach(s=>cards.push(`<div class="item-card reminder"><div class="item-title">Blocked: ${esc(s.name)}</div><div class="muted-block">${esc(s.blockedReason || 'No blocker reason added.')}</div></div>`));
+      document.getElementById('epicFocus').innerHTML = cards.length ? cards.join('') : `<div class="empty">No project steps added yet.</div>`;
+
+      renderCalendar();
+      renderWeeklySummary();
+      syncCalendarWeekPicker();
+    }
+
+    function renderWorkItems(){
+      renderWorkItemFilters();
+
+      const statusFilter = getWorkItemsStatusFilter();
+      const typeFilter = getWorkItemsTypeFilter();
+
+      let items = [...state.workItems].sort((a,b)=>Number(a.priorityLevel || 999) - Number(b.priorityLevel || 999));
+
+      if (statusFilter === 'active'){
+        items = items.filter(i => i.status !== 'Done');
+      } else if (statusFilter !== 'all'){
+        items = items.filter(i => i.status === statusFilter);
+      }
+
+      if (typeFilter !== 'all'){
+        items = items.filter(i => i.type === typeFilter);
+      }
+
+      const wrap = document.getElementById('workList');
+      if (!items.length){
+        wrap.innerHTML = `<div class="empty">No work items match the current filters.</div>`;
+        return;
+      }
+
+      wrap.innerHTML = items.map((item,index)=>{
+        const mins = getWorkItemTimeMinutes(item.id);
+        const completed = getChildTasksCompletedCount(item);
+        const totalChildren = item.children.length;
+        const currentTask = getCurrentChildTask(item);
+
+        return `
+          <div class="work-list-item" draggable="true" data-work-id="${item.id}">
+            <div class="work-list-rank">${index + 1}</div>
+
+            <div onclick="openWorkItemDetailPage('${item.id}')" style="cursor:pointer;">
+              <div class="work-main-title">${esc(item.title)}</div>
+              <div class="work-main-sub">
+                ${esc(item.serviceLine || 'No service line')} • ${esc(item.customerName || 'No customer')}
+              </div>
+              <div class="work-main-sub">
+                Current task: ${esc(currentTask ? currentTask.name : 'All child tasks complete')}
+              </div>
+            </div>
+
+            <div class="work-meta-block">
+              <div class="work-meta-label">Type</div>
+              <div class="work-meta-value">${esc(item.type)}</div>
+            </div>
+
+            <div class="work-meta-block">
+              <div class="work-meta-label">Status</div>
+              <select class="status-select" onchange="setWorkItemStatus('${item.id}', this.value)">
+                ${STATUSES.map(status => `
+                  <option value="${status}" ${item.status===status ? 'selected' : ''}>${status}</option>
+                `).join('')}
+              </select>
+            </div>
+
+            <div style="text-align:right;">
+              <div class="work-time">${hoursLabelFromMinutes(mins)}</div>
+              <div class="work-time-sub">total time</div>
+            </div>
+
+            <div style="grid-column:2 / -1;">
+              ${renderProgressBar(completed, totalChildren)}
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      wireWorkItemDragAndDrop();
+    }
+
+    function openWorkItemDetailPage(workId){
+      const item = state.workItems.find(w=>w.id===workId);
+      if (!item) return;
+
+      normalizeChildOrder(item);
+      document.getElementById('workItemsMainView').style.display = 'none';
+
+      const totalMins = getWorkItemTimeMinutes(workId);
+      const completedChildren = getChildTasksCompletedCount(item);
+      const orderedChildren = getOrderedChildren(item);
+
+      const detail = document.getElementById('workItemDetailPage');
+      detail.dataset.workId = workId;
+      detail.classList.add('active');
+      detail.innerHTML = `
+        <div class="panel">
+          <div class="detail-header">
+            <div class="detail-header-left">
+              <button class="btn small" onclick="closeWorkItemDetailPage()">← Back to Work Items</button>
+              <div class="detail-title">${esc(item.title)}</div>
+              <div class="chips">
+                <span class="chip blue">${esc(item.type)}</span>
+                <span class="chip">${esc(item.status)}</span>
+                <span class="chip">Priority ${esc(item.priorityLevel)}</span>
+              </div>
+            </div>
+
+            <div class="tiny-actions">
+              <button class="btn small primary" onclick="openCalendarDrawerForWorkItem('${item.id}')">Schedule Time</button>
+              <button class="btn small" onclick="openWorkItemDrawer('${item.id}')">Edit Overview</button>
+            </div>
+          </div>
+
+          <div class="detail-summary-grid">
+            <div class="detail-stat">
+              <div class="detail-stat-label">Type</div>
+              <div class="detail-stat-value">${esc(item.type || '—')}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Service Line</div>
+              <div class="detail-stat-value">${esc(item.serviceLine || '—')}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Customer Name</div>
+              <div class="detail-stat-value">${esc(item.customerName || '—')}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Due Date</div>
+              <div class="detail-stat-value">${esc(item.dueDate ? formatDate(item.dueDate) : '—')}</div>
+            </div>
+            <div class="detail-stat">
+              <div class="detail-stat-label">Total Time</div>
+              <div class="detail-stat-value">${hoursLabelFromMinutes(totalMins)}</div>
+            </div>
+          </div>
+
+          <div class="panel detail-description-full">
+            <div class="panel-head">
+              <div><h3>Description</h3></div>
+            </div>
+            <div class="muted-block">${esc(item.description || 'No description added.')}</div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Child Tasks</h3>
+                <div class="subtle">Drag and drop to reorder. Order controls the current task shown on the dashboard.</div>
+              </div>
+              <div class="tiny-actions">
+                <button class="btn small" onclick="addChildTask('${item.id}')">+ Add Child Task</button>
+              </div>
+            </div>
+
+            <div style="margin-bottom:14px;">
+              ${renderProgressBar(completedChildren, item.children.length)}
+            </div>
+
+            ${orderedChildren.length ? `
+              <div class="child-task-header">
+                <div class="col-task">Task</div>
+                <div class="col-scheduled">Scheduled</div>
+                <div class="col-time">Time Spent</div>
+                <div class="col-actions">Actions</div>
+              </div>
+            ` : ''}
+
+            <div id="childTaskList" class="stack">
+              ${orderedChildren.length ? orderedChildren.map((child, idx) => {
+                const mins = getWorkItemChildTimeMinutes(item.id, child.id);
+                const scheduled = childTaskIsScheduled(item.id, child.id);
+                return `
+                  <div class="child-task-row ${child.done ? 'done' : ''}" draggable="true" data-child-id="${child.id}" data-work-id="${item.id}">
+                    <div class="child-task-main">
+                      <div class="child-order-badge">${idx + 1}</div>
+                      <div class="child-task-checkbox">
+                        <input type="checkbox" ${child.done?'checked':''} onchange="toggleChildTask('${item.id}','${child.id}',this.checked)" />
+                      </div>
+                      <div class="child-task-name-wrap">
+                        <div class="child-task-name">${esc(child.name)}</div>
+                      </div>
+                    </div>
+
+                    <div class="child-task-status-cell">
+                      <span class="child-task-status-pill ${scheduled ? 'scheduled' : ''}">
+                        ${scheduled ? 'Scheduled' : 'Not Scheduled'}
+                      </span>
+                    </div>
+
+                    <div class="child-task-hours">${hoursLabelFromMinutes(mins)}</div>
+
+                    <div class="child-task-actions">
+                        <input
+                            type="date"
+                            value="${child.completedAt ? dateInputValue(new Date(child.completedAt)) : ''}"
+                            onchange="setChildTaskCompletedDate('${item.id}','${child.id}', this.value)"
+                            title="Completed date"
+                            style="width:145px;"
+                        />
+                        <button class="btn small primary" onclick="openCalendarDrawerForChildTask('${item.id}','${child.id}')">Schedule</button>
+                        <button class="btn small danger" onclick="deleteChildTask('${item.id}','${child.id}')">Delete</button>
+                        </div>
+                  </div>
+                `;
+              }).join('') : `<div class="empty">No child tasks yet.</div>`}
+            </div>
+
+            <div class="notes-block">
+              <div class="panel-head">
+                <div>
+                  <h3>Notes / History</h3>
+                </div>
+                <div class="tiny-actions">
+                  <button class="btn small" onclick="addParentNote('${item.id}')">+ Add Note</button>
+                </div>
+              </div>
+
+              <div class="stack">
+                ${(item.history && item.history.length) ? item.history.map(n => `
+                  <div class="note-card">
+                    <div class="note-date">${new Date(n.date).toLocaleString()}</div>
+                    <div>${esc(n.text)}</div>
+                  </div>
+                `).join('') : `<div class="empty">No notes yet.</div>`}
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      wireChildTaskDragAndDrop(workId);
+    }
+
+    function closeWorkItemDetailPage(){
+      document.getElementById('workItemDetailPage').classList.remove('active');
+      document.getElementById('workItemDetailPage').innerHTML = '';
+      document.getElementById('workItemDetailPage').dataset.workId = '';
+      document.getElementById('workItemsMainView').style.display = '';
+    }
+
+    function goToWorkItemDetail(workId){
+      state.activeTab = 'work-items';
+      saveState();
+      render();
+      openWorkItemDetailPage(workId);
+    }
+
+    function renderEpicProject(){
+      normalizeEpicStepOrder();
+
+      const steps = getOrderedEpicSteps();
+      const activeOrdered = getActiveOrderedEpicSteps();
+
+      const done = steps.filter(s=>s.status==='Done').length;
+      const blocked = steps.filter(s=>s.status==='Blocked').length;
+      const inProgress = steps.filter(s=>s.status==='In Progress').length;
+      const notStarted = steps.filter(s=>s.status==='Not Started').length;
+
+      document.getElementById('epicSnapshot').innerHTML = [
+        `<div class="item-card project"><div class="item-title">Completed Steps</div><div class="muted-block">${done} of ${steps.length}</div></div>`,
+        `<div class="item-card project"><div class="item-title">In Progress</div><div class="muted-block">${inProgress}</div></div>`,
+        `<div class="item-card reminder"><div class="item-title">Blocked</div><div class="muted-block">${blocked}</div></div>`,
+        `<div class="item-card"><div class="item-title">Not Started</div><div class="muted-block">${notStarted}</div></div>`
+      ].join('');
+
+      const current = activeOrdered[0] || null;
+      const next = activeOrdered.slice(1,4);
+      const nextCards = [];
+
+      if (current){
+        nextCards.push(`
+        <div class="item-card project">
+            <div class="item-title">Current: ${esc(current.name)}</div>
+            <div class="chips">
+            <span class="chip blue">Order ${current.order}</span>
+            <span class="chip">${esc(current.status)}</span>
+            <span class="chip">${esc(current.phase || 'No phase')}</span>
+            </div>
+            ${current.notes ? `<div class="muted-block">${esc(current.notes)}</div>` : ''}
+        </div>
+        `);
+      }
+
+      next.forEach(step=>{
+        nextCards.push(`
+        <div class="item-card ${step.status==='Blocked'?'reminder':'project'}">
+            <div class="item-title">Next: ${esc(step.name)}</div>
+            <div class="chips">
+            <span class="chip blue">Order ${step.order}</span>
+            <span class="chip">${esc(step.status)}</span>
+            <span class="chip">${esc(step.phase || 'No phase')}</span>
+            </div>
+            ${step.notes ? `<div class="muted-block">${esc(step.notes)}</div>` : ''}
+        </div>
+        `);
+      });
+
+      document.getElementById('epicNextSteps').innerHTML = nextCards.length
+        ? nextCards.join('')
+        : `<div class="empty">No project steps entered yet.</div>`;
+
+      const list = document.getElementById('epicStepsList');
+      list.innerHTML = steps.length ? steps.map(step=>`
+        <div class="project-row ${step.status==='Done'?'done':''}" draggable="true" data-epic-id="${step.id}">
+        <div class="project-order-badge">${step.order}</div>
+
+        <div>
+            <strong>${esc(step.name)}</strong>
+            <div class="subtle">${esc(step.notes || '')}</div>
+        </div>
+
+        <div>
+            <div class="subtle">Phase</div>
+            <div>${esc(step.phase || '—')}</div>
+        </div>
+
+        <div>
+            <select onchange="updateEpicField('${step.id}','status',this.value)">
+            ${['Not Started','In Progress','Blocked','Done'].map(opt=>`<option ${step.status===opt?'selected':''}>${opt}</option>`).join('')}
+            </select>
+        </div>
+
+        <div class="tiny-actions">
+            <button class="btn small" onclick="editEpicStepInline('${step.id}')">Edit</button>
+            <button class="btn small danger" onclick="deleteEpicStep('${step.id}')">Delete</button>
+        </div>
+        </div>
+      `).join('') : `<div class="empty">No project steps entered yet.</div>`;
+
+      wireEpicStepDragAndDrop();
+    }
+
+    function currentWeekEntries(){
+      const dates = weekDates(state.currentWeekOffset).map(dateInputValue);
+      return state.calendarEntries.filter(e=>dates.includes(e.date));
+    }
+
+    function getEntriesInLastNDays(days){
+      const today = new Date();
+      const start = new Date();
+      start.setDate(today.getDate() - (days - 1));
+      start.setHours(0,0,0,0);
+
+      return state.calendarEntries.filter(entry => {
+        const entryDate = new Date(entry.date + 'T00:00:00');
+        return entryDate >= start && entryDate <= today;
+      });
+    }
+
+    function getCompletedWorkItemsInLastNDays(days){
+        const today = new Date();
+        const start = new Date();
+        start.setDate(today.getDate() - (days - 1));
+        start.setHours(0,0,0,0);
+
+        return state.workItems.filter(item => {
+            if (!item.completedAt) return false;
+            const completed = new Date(item.completedAt);
+            return completed >= start;
+        });
+    }
+
+    function getRecentlyTouchedChildTasks(days){
+        const today = new Date();
+        const start = new Date();
+        start.setDate(today.getDate() - (days - 1));
+        start.setHours(0,0,0,0);
+
+        const results = [];
+
+        state.workItems.forEach(item => {
+            getOrderedChildren(item).forEach(child => {
+            if (!child.done || !child.completedAt) return;
+
+            const completedDate = new Date(child.completedAt);
+            if (completedDate >= start){
+             results.push({
+                workItemTitle: item.title,
+                childTaskName: child.name
+            });
+        }
+        });
+    });
+
+    return results;
+    }
+
+    function getWaitingDays(item){
+        if (!item.blockedAt) return 0;
+        const blocked = new Date(item.blockedAt);
+        return Math.floor((Date.now() - blocked.getTime()) / 86400000);
+    }
+
+    function renderWeeklySummary(){
+      const entries = currentWeekEntries();
+      const groups = {};
+      entries.forEach(e=>{
+        const key = e.category || 'Other';
+        groups[key] = (groups[key] || 0) + (e.endMinutes - e.startMinutes);
+      });
+      const rows = Object.entries(groups).sort((a,b)=>b[1]-a[1]);
+      document.getElementById('weeklySummary').innerHTML = rows.length ? rows.map(([k,m])=>`
+        <div class="item-card">
+          <div class="item-top">
+            <div class="item-title">${esc(k)}</div>
+            <div class="chip blue">${(m/60).toFixed(1)} hrs</div>
+          </div>
+        </div>
+      `).join('') : `<div class="empty">No time logged in this week yet.</div>`;
+    }
+
+    function renderLeadership(){
+      const biweeklyEntries = getEntriesInLastNDays(14);
+
+      const activeItems = state.workItems.filter(w => !['Done','Deferred'].includes(w.status));
+      const readyForPromotion = state.workItems.filter(w => w.status === 'Ready for Promotion');
+      const waitingCustomer = state.workItems.filter(w => w.status === 'Waiting on Customer');
+      const waitingDataManagement = state.workItems.filter(w => w.status === 'Waiting on Data Management');
+      const epicDone = state.epicProject.steps.filter(s => s.status === 'Done').length;
+      const epicTotal = state.epicProject.steps.length;
+
+      const supportHours = biweeklyEntries
+        .filter(e => e.appointmentType === 'Coworker Support')
+        .reduce((sum,e)=>sum + (e.endMinutes - e.startMinutes), 0);
+
+      const meetingHours = biweeklyEntries
+        .filter(e => e.appointmentType === 'Meeting')
+        .reduce((sum,e)=>sum + (e.endMinutes - e.startMinutes), 0);
+
+      const totalHours = biweeklyEntries.reduce((sum,e)=>sum + (e.endMinutes - e.startMinutes), 0);
+
+      document.getElementById('leadershipMetrics').innerHTML = [
+        {label:'Active Work Items',value:activeItems.length},
+        {label:'Ready for Promotion',value:readyForPromotion.length},
+        {label:'Waiting on Customer',value:waitingCustomer.length},
+        {label:'Epic Project Progress',value:epicTotal ? `${epicDone}/${epicTotal}` : '0/0'},
+        {label:'Meeting Hours, 14 Days',value:`${(meetingHours/60).toFixed(1)}`},
+        {label:'Support Hours, 14 Days',value:`${(supportHours/60).toFixed(1)}`}
+      ].map(m=>`
+        <div class="metric">
+          <div class="label">${esc(m.label)}</div>
+          <div class="value">${esc(String(m.value))}</div>
+        </div>
+      `).join('');
+
+      const completedItems = getCompletedWorkItemsInLastNDays(14);
+      const completedChildTasks = getRecentlyTouchedChildTasks(14);
+
+      document.getElementById('leadershipCompleted').innerHTML =
+        (completedItems.length || completedChildTasks.length) ? `
+          ${completedItems.map(item => `
+            <div class="item-card project">
+              <div class="item-title">${esc(item.title)}</div>
+              <div class="muted-block">Completed work item</div>
+            </div>
+          `).join('')}
+          ${completedChildTasks.slice(0,8).map(row => `
+            <div class="item-card">
+              <div class="item-title">${esc(row.workItemTitle)}</div>
+              <div class="muted-block">Completed child task: ${esc(row.childTaskName)}</div>
+            </div>
+          `).join('')}
+        ` : `<div class="empty">No completions recorded in the last 14 days.</div>`;
+
+      const currentPriorityItems = [...activeItems]
+        .sort((a,b)=>Number(a.priorityLevel || 999) - Number(b.priorityLevel || 999))
+        .slice(0,5);
+
+      document.getElementById('leadershipCurrentPriorities').innerHTML = currentPriorityItems.length ? currentPriorityItems.map(item => `
+        <div class="item-card priority">
+          <div class="item-top">
+            <div>
+              <div class="item-title">${esc(item.title)}</div>
+              <div class="chips">
+                <span class="chip">${esc(item.status)}</span>
+                <span class="chip">${esc(item.type)}</span>
+              </div>
+            </div>
+          </div>
+          <div class="muted-block">Current task: ${esc(getCurrentChildTask(item)?.name || 'All child tasks complete')}</div>
+          <div class="muted-block">Total time: ${hoursLabelFromMinutes(getWorkItemTimeMinutes(item.id))}</div>
+        </div>
+      `).join('') : `<div class="empty">No active priorities right now.</div>`;
+
+      const blockers = [
+        ...waitingCustomer.map(item => ({
+          title: item.title,
+          reason: 'Waiting on customer response',
+          days: getWaitingDays(item)
+        })),
+        ...waitingDataManagement.map(item => ({
+          title: item.title,
+          reason: 'Waiting on Data Management',
+          days: getWaitingDays(item)
+        })),
+        ...state.epicProject.steps
+          .filter(step => step.status === 'Blocked')
+          .map(step => ({
+            title: step.name,
+            reason: step.blockedReason || 'Epic project blocker',
+            days: ''
+          }))
+      ];
+
+      document.getElementById('leadershipBlockers').innerHTML = blockers.length ? blockers.map(b => `
+        <div class="item-card reminder">
+          <div class="item-title">${esc(b.title)}</div>
+          <div class="muted-block">${esc(b.reason)}${b.days !== '' ? ` • ${b.days} day(s)` : ''}</div>
+        </div>
+      `).join('') : `<div class="empty">No visible blockers right now.</div>`;
+
+      const byType = {};
+      biweeklyEntries.forEach(entry => {
+        const key = entry.appointmentType || entry.category || 'Other';
+        byType[key] = (byType[key] || 0) + (entry.endMinutes - entry.startMinutes);
+      });
+
+      const typeRows = Object.entries(byType).sort((a,b)=>b[1]-a[1]);
+      const totalTypeMinutes = typeRows.reduce((sum,[,mins]) => sum + mins, 0);
+
+      document.getElementById('leadershipTimeBreakdown').innerHTML = typeRows.length ? typeRows.map(([type,mins]) => {
+        const pct = totalTypeMinutes ? ((mins / totalTypeMinutes) * 100).toFixed(0) : '0';
+        return `
+          <div class="item-card">
+            <div class="item-top">
+              <div class="item-title">${esc(type)}</div>
+              <div class="chips">
+                <span class="chip blue">${(mins/60).toFixed(1)} hrs</span>
+                <span class="chip">${pct}%</span>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('') : `<div class="empty">No time logged in the last 14 days.</div>`;
+
+      const talkingPoints = [];
+      if (completedItems.length){
+        talkingPoints.push(`Completed ${completedItems.length} full work item(s) in the last 14 days.`);
+      }
+      if (readyForPromotion.length){
+        talkingPoints.push(`${readyForPromotion.length} item(s) are ready for promotion and may need coordination or visibility.`);
+      }
+      if (waitingCustomer.length){
+        talkingPoints.push(`${waitingCustomer.length} item(s) are waiting on customer response.`);
+      }
+      if (waitingDataManagement.length){
+        talkingPoints.push(`${waitingDataManagement.length} item(s) are waiting on Data Management.`);
+      }
+      if (supportHours > 0){
+        talkingPoints.push(`Spent ${(supportHours/60).toFixed(1)} hours on coworker support in the last 14 days.`);
+      }
+      if (meetingHours > 0){
+        talkingPoints.push(`Spent ${(meetingHours/60).toFixed(1)} hours in meetings in the last 14 days.`);
+      }
+      if (epicTotal){
+        talkingPoints.push(`Epic catalog project progress is ${epicDone}/${epicTotal} completed steps.`);
+      }
+      if (totalHours > 0){
+        talkingPoints.push(`Logged ${(totalHours/60).toFixed(1)} total hours across all tracked appointments in the last 14 days.`);
+      }
+      if (!talkingPoints.length){
+        talkingPoints.push('Add work items, calendar time, and Epic steps to generate talking points.');
+      }
+
+      document.getElementById('leadershipNarrative').innerHTML = talkingPoints.map(point => `
+        <div class="note-card"><div>${esc(point)}</div></div>
+      `).join('');
+    }
+
+    function renderCalendar(){
+      const grid = document.getElementById('calendarGrid');
+      const dates = weekDates(state.currentWeekOffset);
+      const days = getCalendarDays();
+      const slotCount = getCalendarSlotCount();
+      const endMinutes = getCalendarEndMinutes();
+
+      document.getElementById('weekLabel').textContent = `${shortDate(dates[0])} - ${shortDate(dates[dates.length - 1])}`;
+      document.getElementById('toggleCalendarViewBtn').textContent = state.calendarExpanded ? 'Show Workweek' : 'Show All';
+
+      grid.style.gridTemplateColumns = `84px repeat(${days.length}, minmax(180px,1fr))`;
+      grid.style.minWidth = state.calendarExpanded ? '1400px' : '1040px';
+
+      let html = `<div class="cal-head">Time</div>`;
+      html += dates.map((d,i)=>`<div class="cal-head">${days[i]}<br><strong style="color:var(--charcoal);font-size:14px">${shortDate(d)}</strong></div>`).join('');
+
+      for (let slot=0; slot<slotCount; slot++){
+        const mins = START_MINUTES + slot*SLOT_MINUTES;
+        if (mins >= endMinutes) break;
+
+        html += `<div class="time-cell">${formatTime(mins)}</div>`;
+        for (let day=0; day<days.length; day++){
+        html += `<div class="slot" data-day="${day}" data-slot="${slot}"></div>`;
+        }
+      }
+
+      grid.innerHTML = html;
+
+      const layer = document.createElement('div');
+      layer.className = 'event-layer';
+      layer.style.gridTemplateColumns = `repeat(${days.length},1fr)`;
+
+      const headerHeight = grid.querySelector('.cal-head')?.offsetHeight || 40;
+      layer.style.top = `${headerHeight}px`;
+
+      for (let i=0; i<days.length; i++){
+      const col = document.createElement('div');
+      col.className = 'day-column';
+      col.dataset.dayColumn = i;
+      layer.appendChild(col);
+      }
+
+      grid.appendChild(layer);
+
+      attachCalendarCreateHandlers();
+      renderCalendarEvents();
+    }
+
+    function renderCalendarEvents(){
+      const dates = weekDates(state.currentWeekOffset).map(dateInputValue);
+      const cols = document.querySelectorAll('.day-column');
+      cols.forEach(c=>c.innerHTML='');
+
+      state.calendarEntries.filter(e=>dates.includes(e.date)).forEach(entry=>{
+        const dayIndex = dates.indexOf(entry.date);
+        if (dayIndex < 0) return;
+
+        const endMinutes = getCalendarEndMinutes();
+        if (entry.startMinutes >= endMinutes) return;
+
+        const col = cols[dayIndex];
+        const top = ((entry.startMinutes - START_MINUTES) / SLOT_MINUTES) * SLOT_HEIGHT;
+        const clippedEnd = Math.min(entry.endMinutes, endMinutes);
+        const height = ((clippedEnd - entry.startMinutes) / SLOT_MINUTES) * SLOT_HEIGHT;
+
+        const block = document.createElement('div');
+        const blockHeight = Math.max(height, SLOT_HEIGHT);
+        const isTallBlock = blockHeight > 52;
+        const isShortBlock = blockHeight <= 52;
+        const appointmentTypeClass = getAppointmentTypeClass(entry.appointmentType);
+
+        block.className = `event-block ${appointmentTypeClass} ${entry.interrupted ? 'interrupted' : ''} ${isTallBlock ? 'tall' : ''} ${isShortBlock ? 'short' : ''}`;
+        block.style.top = `${top}px`;
+        block.style.height = `${blockHeight}px`;
+        const showWorkItemSubtitle = (entry.appointmentType === 'Work Item' || entry.appointmentType === 'Databricks') && !isShortBlock;
+        const canCompleteChildTask = entry.appointmentType === 'Work Item' && entry.childTaskId;
+
+        block.innerHTML = `
+          <div class="event-content">
+            <div class="event-title">${esc(entry.title)}</div>
+            ${showWorkItemSubtitle && entry.workItemTitle ? `<div class="event-subtitle">${esc(entry.workItemTitle)}</div>` : ``}
+          </div>
+
+          <div class="event-actions">
+            ${canCompleteChildTask ? `<button class="event-action-btn" title="Mark child task complete" onclick="event.stopPropagation(); completeCalendarEntryChildTask('${entry.id}')">✓</button>` : ``}
+            <button class="event-action-btn" title="Edit appointment" onclick="event.stopPropagation(); openCalendarDrawer('${entry.id}')">⚙</button>
+            <button class="event-action-btn" title="Delete appointment" onclick="event.stopPropagation(); deleteCalendarEntry('${entry.id}')">🗑</button>
+          </div>
+
+          <div class="resize-handle" data-entry-id="${entry.id}"></div>
+        `;
+        col.appendChild(block);
+      });
+
+      document.querySelectorAll('.resize-handle').forEach(h=>h.addEventListener('mousedown', startResizeEntry));
+    }
+
+    function attachCalendarCreateHandlers(){
+      document.querySelectorAll('.slot').forEach(slot=>{
+        slot.addEventListener('mousedown', e=>{
+        dragCreate = {
+            day:Number(slot.dataset.day),
+            startSlot:Number(slot.dataset.slot),
+            currentSlot:Number(slot.dataset.slot)
+        };
+        e.preventDefault();
+        });
+
+        slot.addEventListener('mouseenter', ()=>{
+        if (!dragCreate) return;
+        dragCreate.day = Number(slot.dataset.day);
+        dragCreate.currentSlot = Number(slot.dataset.slot);
+        });
+      });
+
+    document.addEventListener('mouseup', finishCalendarCreate);
+    }
+
+    function finishCalendarCreate(){
+      if (!dragCreate) return;
+      const { day, startSlot, currentSlot } = dragCreate;
+      const minSlot = Math.min(startSlot, currentSlot);
+      const maxSlot = Math.max(startSlot, currentSlot) + 1;
+      dragCreate = null;
+      const d = weekDates(state.currentWeekOffset)[day];
+      openCalendarDrawer(null, {
+        date: dateInputValue(d),
+        startMinutes: START_MINUTES + minSlot * SLOT_MINUTES,
+        endMinutes: START_MINUTES + maxSlot * SLOT_MINUTES,
+        childTaskId:''
+      });
+    }
+
+    function startResizeEntry(e){
+      const entryId = e.target.dataset.entryId;
+      const entry = state.calendarEntries.find(x=>x.id===entryId);
+      if (!entry) return;
+      resizeState = {
+        entryId,
+        startY:e.clientY,
+        originalEnd:entry.endMinutes
+      };
+      document.addEventListener('mousemove', onResizeEntry);
+      document.addEventListener('mouseup', stopResizeEntry);
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    function onResizeEntry(e){
+      if (!resizeState) return;
+      const diffY = e.clientY - resizeState.startY;
+      const slotDelta = Math.round(diffY / SLOT_HEIGHT);
+      const entry = state.calendarEntries.find(x=>x.id===resizeState.entryId);
+      if (!entry) return;
+      entry.endMinutes = Math.max(entry.startMinutes + SLOT_MINUTES, Math.min(getCalendarEndMinutes(), resizeState.originalEnd + slotDelta * SLOT_MINUTES));
+      saveState();
+      renderCalendarEvents();
+      renderWeeklySummary();
+      renderLeadership();
+      refreshOpenWorkItemDetail();
+    }
+
+    function stopResizeEntry(){
+      resizeState = null;
+      document.removeEventListener('mousemove', onResizeEntry);
+      document.removeEventListener('mouseup', stopResizeEntry);
+    }
+
+    function openDrawer(title, subtitle, bodyHtml, actionsHtml=''){
+      document.getElementById('drawerTitle').textContent = title;
+      document.getElementById('drawerSubtitle').textContent = subtitle || '';
+      document.getElementById('drawerBody').innerHTML = bodyHtml;
+      document.getElementById('drawerActions').innerHTML = actionsHtml;
+      document.getElementById('drawerBackdrop').classList.add('open');
+      document.getElementById('drawer').classList.add('open');
+    }
+
+    function closeDrawer(){
+      document.getElementById('drawerBackdrop').classList.remove('open');
+      document.getElementById('drawer').classList.remove('open');
+      drawerEntityId = null;
+    }
+
+    function openCalendarDrawer(entryId=null, prefill=null){
+      drawerEntityId = entryId || null;
+      const entry = entryId ? state.calendarEntries.find(e=>e.id===entryId) : null;
+      const data = entry || prefill || {
+        date: dateInputValue(weekDates(state.currentWeekOffset)[0]),
+        startMinutes: 9*60,
+        endMinutes: 10*60,
+        title:'',
+        category:'Build Work',
+        notes:'',
+        interrupted:false,
+        workItemId:'',
+        childTaskId:''
+      };
+      const appointmentType = data.appointmentType || (
+        data.workItemId
+          ? ((state.workItems.find(w => w.id === data.workItemId)?.type === 'Databricks') ? 'Databricks' : 'Work Item')
+          : (data.category || 'Other')
+      );
+
+      const availableWorkItems = getWorkItemsForAppointmentType(appointmentType);
+      const availableChildTasks = getChildTasksForWorkItem(data.workItemId || '');
+
+      const body = `
+        <div class="stack">
+          <div class="section-title">${entry ? 'Edit Calendar Block' : 'Create Calendar Block'}</div>
+
+          <div class="form-grid three">
+            <div class="field">
+              <label>Date</label>
+              <input id="dc_date" type="date" value="${esc(data.date)}" />
+            </div>
+            <div class="field">
+              <label>Start</label>
+              <input id="dc_start" type="time" step="1800" value="${minutesToInput(data.startMinutes)}" />
+            </div>
+            <div class="field">
+              <label>End</label>
+              <input id="dc_end" type="time" step="1800" value="${minutesToInput(data.endMinutes)}" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Appointment Type</label>
+            <select id="dc_appointmentType">
+              ${getAppointmentTypes().map(type => `
+                <option value="${type}" ${appointmentType===type?'selected':''}>${type}</option>
+              `).join('')}
+            </select>
+          </div>
+
+          <div id="dc_workItemSection" style="${(appointmentType === 'Work Item' || appointmentType === 'Databricks') ? '' : 'display:none;'}">
+            <div class="form-grid">
+              <div class="field">
+                <label>Work Item</label>
+                <select id="dc_workItem">
+                  <option value="">Select work item</option>
+                  ${availableWorkItems.map(w=>`
+                    <option value="${w.id}" ${(data.workItemId||'')===w.id?'selected':''}>${esc(w.title)}</option>
+                  `).join('')}
+                </select>
+              </div>
+              <div class="field">
+                <label>Child Task</label>
+                <select id="dc_childTaskId">
+                  <option value="">Select child task</option>
+                  ${availableChildTasks.map(child=>`
+                    <option value="${child.id}" ${(data.childTaskId||'')===child.id?'selected':''}>${esc(child.name)}</option>
+                  `).join('')}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div id="dc_manualTitleSection" style="${(appointmentType === 'Work Item' || appointmentType === 'Databricks') ? 'display:none;' : ''}">
+            <div class="field">
+              <label>Title</label>
+              <input id="dc_title" value="${esc(data.title || '')}" />
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Notes</label>
+            <textarea id="dc_notes">${esc(data.notes || '')}</textarea>
+          </div>
+
+          <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;color:var(--text)">
+            <input type="checkbox" id="dc_interrupted" style="width:16px" ${data.interrupted ? 'checked' : ''} />
+            Mark as interrupted / split work
+          </label>
+        </div>
+      `;
+      const actions = `
+        <button class="btn success" onclick="saveCalendarDrawer()">Save Block</button>
+        ${entry ? `<button class="btn danger" onclick="deleteCalendarEntry('${entry.id}')">Delete</button>` : ''}
+      `;
+      openDrawer(entry ? 'Calendar Block' : 'New Calendar Block', 'Create or edit scheduled time.', body, actions);
+      const appointmentTypeEl = document.getElementById('dc_appointmentType');
+      const workItemSectionEl = document.getElementById('dc_workItemSection');
+      const manualTitleSectionEl = document.getElementById('dc_manualTitleSection');
+      const workItemEl = document.getElementById('dc_workItem');
+      const childTaskEl = document.getElementById('dc_childTaskId');
+
+      function refreshCalendarDrawerFields(){
+        const selectedType = appointmentTypeEl.value;
+        const needsWorkItem = selectedType === 'Work Item' || selectedType === 'Databricks';
+
+        workItemSectionEl.style.display = needsWorkItem ? '' : 'none';
+        manualTitleSectionEl.style.display = needsWorkItem ? 'none' : '';
+
+        if (!needsWorkItem){
+          return;
+        }
+
+        if (workItemEl){
+          const matchingWorkItems = getWorkItemsForAppointmentType(selectedType);
+          let currentWorkItemId = workItemEl.value;
+
+          const workItemStillValid = matchingWorkItems.some(w => w.id === currentWorkItemId);
+          if (!workItemStillValid){
+            currentWorkItemId = '';
+          }
+
+          workItemEl.innerHTML = `
+            <option value="">Select work item</option>
+            ${matchingWorkItems.map(w=>`
+              <option value="${w.id}" ${currentWorkItemId===w.id?'selected':''}>${esc(w.title)}</option>
+            `).join('')}
+          `;
+
+          const matchingChildTasks = getChildTasksForWorkItem(currentWorkItemId);
+          let currentChildTaskId = childTaskEl ? childTaskEl.value : '';
+
+          const childTaskStillValid = matchingChildTasks.some(child => child.id === currentChildTaskId);
+          if (!childTaskStillValid){
+            currentChildTaskId = '';
+          }
+
+          if (childTaskEl){
+            childTaskEl.innerHTML = `
+              <option value="">Select child task</option>
+              ${matchingChildTasks.map(child=>`
+                <option value="${child.id}" ${currentChildTaskId===child.id?'selected':''}>${esc(child.name)}</option>
+              `).join('')}
+            `;
+          }
+        }
+      }
+
+      if (appointmentTypeEl){
+        appointmentTypeEl.addEventListener('change', refreshCalendarDrawerFields);
+      }
+      if (workItemEl){
+        workItemEl.addEventListener('change', refreshCalendarDrawerFields);
+      }
+    }
+
+    function openCalendarDrawerForWorkItem(workId){
+      const item = state.workItems.find(w=>w.id===workId);
+      if (!item) return;
+
+      const appointmentType = item.type === 'Databricks' ? 'Databricks' : 'Work Item';
+      const currentChild = getCurrentChildTask(item);
+
+      openCalendarDrawer(null,{
+        date: dateInputValue(weekDates(state.currentWeekOffset)[0]),
+        startMinutes: 9*60,
+        endMinutes: 10*60,
+        title: currentChild ? currentChild.name : item.title,
+        category: appointmentType,
+        appointmentType,
+        notes: item.description || '',
+        interrupted:false,
+        workItemId: workId,
+        childTaskId: currentChild ? currentChild.id : ''
+      });
+    }
+
+    function openCalendarDrawerForChildTask(workId, childId){
+      const item = state.workItems.find(w=>w.id===workId);
+      if (!item) return;
+
+      const child = item.children.find(c=>c.id===childId);
+      if (!child) return;
+
+      const appointmentType = item.type === 'Databricks' ? 'Databricks' : 'Work Item';
+
+      openCalendarDrawer(null,{
+        date: dateInputValue(weekDates(state.currentWeekOffset)[0]),
+        startMinutes: 9*60,
+        endMinutes: 10*60,
+        title: child.name,
+        category: appointmentType,
+        appointmentType,
+        notes: `${item.title} - ${child.name}`,
+        interrupted:false,
+        workItemId: workId,
+        childTaskId: childId
+      });
+    }
+
+    function saveCalendarDrawer(){
+      const date = document.getElementById('dc_date').value;
+      const startMinutes = timeToMinutes(document.getElementById('dc_start').value);
+      const endMinutes = timeToMinutes(document.getElementById('dc_end').value);
+
+      if (endMinutes <= startMinutes){
+        alert('End time must be later than start time.');
+        return;
+      }
+
+      const appointmentType = document.getElementById('dc_appointmentType').value;
+      const needsWorkItem = appointmentType === 'Work Item' || appointmentType === 'Databricks';
+
+      let workItemId = '';
+      let childTaskId = '';
+      let title = '';
+      let category = appointmentType;
+
+      if (needsWorkItem){
+        workItemId = document.getElementById('dc_workItem')?.value || '';
+        childTaskId = document.getElementById('dc_childTaskId')?.value || '';
+
+        if (!workItemId){
+          alert('Please select a work item.');
+          return;
+        }
+        if (!childTaskId){
+          alert('Please select a child task.');
+          return;
+        }
+
+        const item = state.workItems.find(w => w.id === workItemId);
+        const child = item?.children?.find(c => c.id === childTaskId);
+
+        if (!item || !child){
+          alert('Could not find the selected work item or child task.');
+          return;
+        }
+
+        title = child.name;
+        category = appointmentType;
+      } else {
+        title = document.getElementById('dc_title')?.value.trim() || '';
+        if (!title){
+          alert('Please enter a title.');
+          return;
+        }
+      }
+
+      const linked = state.workItems.find(w=>w.id===workItemId);
+
+      if (drawerEntityId){
+        const entry = state.calendarEntries.find(e=>e.id===drawerEntityId);
+        if (!entry) return;
+
+        entry.date = date;
+        entry.startMinutes = startMinutes;
+        entry.endMinutes = endMinutes;
+        entry.title = title;
+        entry.category = category;
+        entry.appointmentType = appointmentType;
+        entry.notes = document.getElementById('dc_notes').value.trim();
+        entry.interrupted = document.getElementById('dc_interrupted').checked;
+        entry.workItemId = workItemId;
+        entry.workItemTitle = linked ? linked.title : '';
+        entry.childTaskId = childTaskId;
+      } else {
+        state.calendarEntries.push({
+          id: uid('cal'),
+          date,
+          startMinutes,
+          endMinutes,
+          title,
+          category,
+          appointmentType,
+          notes: document.getElementById('dc_notes').value.trim(),
+          interrupted: document.getElementById('dc_interrupted').checked,
+          workItemId,
+          workItemTitle: linked ? linked.title : '',
+          childTaskId
+        });
+      }
+
+      saveState();
+      render();
+      closeDrawer();
+      refreshOpenWorkItemDetail();
+    }
+
+    function deleteCalendarEntry(id){
+      if (!confirm('Delete this calendar block?')) return;
+      state.calendarEntries = state.calendarEntries.filter(e=>e.id!==id);
+      saveState();
+      render();
+      closeDrawer();
+      refreshOpenWorkItemDetail();
+    }
+
+    function completeCalendarEntryChildTask(entryId){
+    const entry = state.calendarEntries.find(e => e.id === entryId);
+    if (!entry || !entry.workItemId || !entry.childTaskId) return;
+
+    const item = state.workItems.find(w => w.id === entry.workItemId);
+    if (!item) return;
+
+    const child = item.children.find(c => c.id === entry.childTaskId);
+    if (!child) return;
+
+    child.done = true;
+    child.completedAt = new Date().toISOString();
+    refreshWorkItemStatusFromChildTasks(item);
+    item.updatedAt = new Date().toISOString();
+
+    saveState();
+    render();
+    refreshOpenWorkItemDetail();
+    }
+
+    function openCreateWorkModal(){
+      document.getElementById('createWorkModalBackdrop').classList.add('open');
+    }
+
+    function openEpicStepModal(){
+    document.getElementById('epicStepModalBackdrop').classList.add('open');
+    }
+
+    function closeEpicStepModal(){
+    document.getElementById('epicStepModalBackdrop').classList.remove('open');
+    document.getElementById('epicStepForm').reset();
+    }
+
+    function closeCreateWorkModal(){
+      document.getElementById('createWorkModalBackdrop').classList.remove('open');
+      document.getElementById('createWorkModalForm').reset();
+    }
+
+    function createWorkItemFromModal(e){
+      e.preventDefault();
+
+      const templateKey = document.getElementById('mw_template').value;
+      const nextPriority = (state.workItems.length + 1);
+
+      const templateChildren = (templates()[templateKey] || []).map((name, idx)=>({
+        id:uid('child'),
+        name,
+        done:false,
+        completedAt:'',
+        order: idx + 1
+      }));
+
+      const item = {
+        id: uid('work'),
+        title: document.getElementById('mw_title').value.trim(),
+        template: templateKey,
+        type: document.getElementById('mw_type').value,
+        status: document.getElementById('mw_status').value,
+        priorityLevel: String(nextPriority),
+        serviceLine: document.getElementById('mw_serviceLine').value.trim(),
+        customerName: document.getElementById('mw_customerName').value.trim(),
+        dueDate: document.getElementById('mw_dueDate').value,
+        description: document.getElementById('mw_description').value.trim(),
+        reminderTag: '',
+        children: templateChildren,
+        history: document.getElementById('mw_initialNote').value.trim() ? [{
+          id:uid('note'),
+          date:new Date().toISOString(),
+          text:document.getElementById('mw_initialNote').value.trim()
+        }] : [],
+        completedAt:'',
+        statusChangedAt:new Date().toISOString(),
+        blockedAt:'',
+        createdAt:new Date().toISOString(),
+        updatedAt:new Date().toISOString()
+      };
+
+      state.workItems.push(item);
+      normalizePriorities();
+      saveState();
+      closeCreateWorkModal();
+      render();
+    }
+
+    function openWorkItemDrawer(id){
+      const item = state.workItems.find(w=>w.id===id);
+      if (!item) return;
+      drawerEntityId = id;
+      const body = `
+        <div class="stack">
+          <div class="section-title">Overview</div>
+          <div class="form-grid">
+            <div class="field">
+              <label>Title</label>
+              <input id="dw_title" value="${esc(item.title)}" />
+            </div>
+            <div class="field">
+              <label>Type</label>
+              <select id="dw_type">
+                ${['Dashboard','Report','Epic Tool','Databricks'].map(x=>`<option ${item.type===x?'selected':''}>${x}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div class="form-grid three">
+            <div class="field">
+              <label>Status</label>
+              <select id="dw_status">
+                ${STATUSES.map(x=>`<option ${item.status===x?'selected':''}>${x}</option>`).join('')}
+              </select>
+            </div>
+            <div class="field">
+              <label>Service Line</label>
+              <input id="dw_serviceLine" value="${esc(item.serviceLine || '')}" />
+            </div>
+            <div class="field">
+              <label>Customer Name</label>
+              <input id="dw_customerName" value="${esc(item.customerName || '')}" />
+            </div>
+          </div>
+          <div class="form-grid">
+            <div class="field">
+                <label>Due Date</label>
+                <input id="dw_dueDate" type="date" value="${esc(item.dueDate || '')}" />
+            </div>
+            <div class="field">
+                <label>Completed Date</label>
+                <input id="dw_completedAt" type="date" value="${item.completedAt ? dateInputValue(new Date(item.completedAt)) : ''}" />
+            </div>
+            </div>
+          <div class="field">
+            <label>Description / Context</label>
+            <textarea id="dw_desc">${esc(item.description || '')}</textarea>
+          </div>
+
+          <div class="section-title">Notes / History</div>
+          <div class="field">
+            <label>New Note</label>
+            <textarea id="dw_newNote" placeholder="Add a note, update, blocker, or follow-up detail"></textarea>
+          </div>
+          <div class="tiny-actions">
+            <button class="btn small" onclick="saveNewWorkNote('${item.id}')">Add Note</button>
+          </div>
+          <div class="stack">
+            ${item.history?.length ? item.history.map(n=>`
+              <div class="note-card">
+                <div class="note-date">${new Date(n.date).toLocaleString()}</div>
+                <div>${esc(n.text)}</div>
+              </div>
+            `).join('') : `<div class="empty">No notes yet.</div>`}
+          </div>
+        </div>
+      `;
+      const actions = `
+        <button class="btn success" onclick="saveWorkItemDrawer('${item.id}')">Save Changes</button>
+        <button class="btn danger" onclick="deleteWorkItem('${item.id}')">Delete</button>
+      `;
+      openDrawer(item.title, 'Edit overview and notes.', body, actions);
+    }
+
+    function setWorkItemStatus(workId, newStatus){
+    const item = state.workItems.find(w => w.id === workId);
+    if (!item) return;
+
+    setWorkItemStatusWithTracking(item, newStatus);
+
+    saveState();
+    renderWorkItems();
+    renderDashboard();
+    renderLeadership();
+    refreshOpenWorkItemDetail();
+    }
+
+    function saveWorkItemDrawer(id){
+    const item = state.workItems.find(w=>w.id===id);
+    if (!item) return;
+    item.title = document.getElementById('dw_title').value.trim() || item.title;
+    item.type = document.getElementById('dw_type').value;
+    setWorkItemStatusWithTracking(item, document.getElementById('dw_status').value);
+    item.serviceLine = document.getElementById('dw_serviceLine').value.trim();
+    item.customerName = document.getElementById('dw_customerName').value.trim();
+    item.dueDate = document.getElementById('dw_dueDate').value;
+    const completedDateValue = document.getElementById('dw_completedAt').value;
+    item.completedAt = completedDateValue ? new Date(completedDateValue + 'T12:00:00').toISOString() : '';
+    item.description = document.getElementById('dw_desc').value.trim();
+    item.updatedAt = new Date().toISOString();
+    saveState();
+    render();
+    closeDrawer();
+    refreshOpenWorkItemDetail();
+    }
+
+    function toggleChildTask(workId, childId, checked){
+    const item = state.workItems.find(w=>w.id===workId);
+    if (!item) return;
+    const child = item.children.find(c=>c.id===childId);
+    if (!child) return;
+
+    child.done = checked;
+    child.completedAt = checked ? new Date().toISOString() : '';
+    refreshWorkItemStatusFromChildTasks(item);
+    item.updatedAt = new Date().toISOString();
+
+    saveState();
+    render();
+    refreshOpenWorkItemDetail();
+    }
+
+    function addChildTask(workId){
+      const item = state.workItems.find(w => w.id === workId);
+      if (!item) return;
+      normalizeChildOrder(item);
+      const name = prompt('New child task name:');
+      if (!name || !name.trim()) return;
+      item.children.push({
+        id: uid('child'),
+        name: name.trim(),
+        done: false,
+        completedAt: '',
+        order: item.children.length + 1
+      });
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      render();
+      refreshOpenWorkItemDetail();
+    }
+
+    function deleteChildTask(workId, childId){
+      const item = state.workItems.find(w => w.id === workId);
+      if (!item) return;
+      item.children = item.children.filter(c => c.id !== childId);
+      normalizeChildOrder(item);
+      state.calendarEntries.forEach(entry => {
+        if (entry.workItemId === workId && entry.childTaskId === childId) {
+          entry.childTaskId = '';
+        }
+      });
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      render();
+      refreshOpenWorkItemDetail();
+    }
+
+    function setChildTaskCompletedDate(workId, childId, value){
+    const item = state.workItems.find(w => w.id === workId);
+    if (!item) return;
+
+    const child = item.children.find(c => c.id === childId);
+    if (!child) return;
+
+    if (value){
+        child.completedAt = new Date(value + 'T12:00:00').toISOString();
+        child.done = true;
+    } else {
+        child.completedAt = '';
+        child.done = false;
+    }
+
+    refreshWorkItemStatusFromChildTasks(item);
+    item.updatedAt = new Date().toISOString();
+
+    saveState();
+    render();
+    refreshOpenWorkItemDetail();
+    }
+
+    function addParentNote(workId){
+      const item = state.workItems.find(w => w.id === workId);
+      if (!item) return;
+      const note = prompt('Add note:');
+      if (!note || !note.trim()) return;
+      item.history.unshift({
+        id: uid('note'),
+        date: new Date().toISOString(),
+        text: note.trim()
+      });
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      render();
+      refreshOpenWorkItemDetail();
+    }
+
+    function saveNewWorkNote(workId){
+      const item = state.workItems.find(w=>w.id===workId);
+      if (!item) return;
+      const val = document.getElementById('dw_newNote').value.trim();
+      if (!val) return;
+      item.history.unshift({id:uid('note'),date:new Date().toISOString(),text:val});
+      item.updatedAt = new Date().toISOString();
+      saveState();
+      render();
+      openWorkItemDrawer(workId);
+      refreshOpenWorkItemDetail();
+    }
+
+    function wireWorkItemDragAndDrop(){
+      const items = document.querySelectorAll('.work-list-item');
+      let draggedId = null;
+
+      items.forEach(item=>{
+        item.addEventListener('dragstart', ()=>{
+          draggedId = item.dataset.workId;
+          item.classList.add('dragging');
+        });
+
+        item.addEventListener('dragend', ()=>{
+          item.classList.remove('dragging');
+        });
+
+        item.addEventListener('dragover', (e)=>{
+          e.preventDefault();
+        });
+
+        item.addEventListener('drop', ()=>{
+          const targetId = item.dataset.workId;
+          if (!draggedId || draggedId === targetId) return;
+
+          let ordered = [...state.workItems].sort((a,b)=>Number(a.priorityLevel || 999) - Number(b.priorityLevel || 999));
+          const draggedIndex = ordered.findIndex(i=>i.id===draggedId);
+          const targetIndex = ordered.findIndex(i=>i.id===targetId);
+          if (draggedIndex < 0 || targetIndex < 0) return;
+
+          const [moved] = ordered.splice(draggedIndex,1);
+          ordered.splice(targetIndex,0,moved);
+
+          ordered.forEach((item,index)=>{
+            item.priorityLevel = String(index + 1);
+          });
+
+          state.workItems = ordered;
+          saveState();
+          renderWorkItems();
+          renderDashboard();
+          refreshOpenWorkItemDetail();
+        });
+      });
+    }
+
+    function wireEpicStepDragAndDrop(){
+      const rows = document.querySelectorAll('.project-row');
+      let draggedId = null;
+
+      rows.forEach(row=>{
+        row.addEventListener('dragstart', ()=>{
+        draggedId = row.dataset.epicId;
+        row.classList.add('dragging');
+        });
+
+        row.addEventListener('dragend', ()=>{
+        row.classList.remove('dragging');
+        });
+
+        row.addEventListener('dragover', (e)=>{
+        e.preventDefault();
+        });
+
+        row.addEventListener('drop', ()=>{
+        const targetId = row.dataset.epicId;
+        if (!draggedId || draggedId === targetId) return;
+
+        let ordered = getOrderedEpicSteps();
+        const draggedIndex = ordered.findIndex(step => step.id === draggedId);
+        const targetIndex = ordered.findIndex(step => step.id === targetId);
+        if (draggedIndex < 0 || targetIndex < 0) return;
+
+        const [moved] = ordered.splice(draggedIndex, 1);
+        ordered.splice(targetIndex, 0, moved);
+
+        ordered.forEach((step, index)=>{
+            step.order = index + 1;
+        });
+
+        state.epicProject.steps = ordered;
+        saveState();
+        renderEpicProject();
+        });
+      });
+    }
+
+    function wireChildTaskDragAndDrop(workId){
+      const rows = document.querySelectorAll('.child-task-row');
+      let draggedId = null;
+
+      rows.forEach(row=>{
+        row.addEventListener('dragstart', ()=>{
+          draggedId = row.dataset.childId;
+          row.classList.add('dragging');
+        });
+
+        row.addEventListener('dragend', ()=>{
+          row.classList.remove('dragging');
+        });
+
+        row.addEventListener('dragover', (e)=>{
+          e.preventDefault();
+        });
+
+        row.addEventListener('drop', ()=>{
+          const targetId = row.dataset.childId;
+          if (!draggedId || draggedId === targetId) return;
+
+          const item = state.workItems.find(w=>w.id===workId);
+          if (!item) return;
+
+          let ordered = getOrderedChildren(item);
+          const draggedIndex = ordered.findIndex(c=>c.id===draggedId);
+          const targetIndex = ordered.findIndex(c=>c.id===targetId);
+          if (draggedIndex < 0 || targetIndex < 0) return;
+
+          const [moved] = ordered.splice(draggedIndex,1);
+          ordered.splice(targetIndex,0,moved);
+
+          ordered.forEach((child,index)=>{
+            child.order = index + 1;
+          });
+
+          item.children = ordered;
+          item.updatedAt = new Date().toISOString();
+          saveState();
+          render();
+          openWorkItemDetailPage(workId);
+        });
+      });
+    }
+
+    function refreshOpenWorkItemDetail(){
+      const detail = document.getElementById('workItemDetailPage');
+      if (detail.classList.contains('active') && detail.dataset.workId){
+        openWorkItemDetailPage(detail.dataset.workId);
+      }
+    }
+
+    function deleteWorkItem(id){
+      if (!confirm('Delete this work item? Existing time blocks will remain.')) return;
+      state.workItems = state.workItems.filter(w=>w.id!==id);
+      state.calendarEntries.forEach(entry => {
+        if (entry.workItemId === id) {
+          entry.workItemId = '';
+          entry.workItemTitle = '';
+          entry.childTaskId = '';
+        }
+      });
+      normalizePriorities();
+      saveState();
+      render();
+      closeDrawer();
+      closeWorkItemDetailPage();
+    }
+
+    function setWorkItemStatus(workId, newStatus){
+      const item = state.workItems.find(w => w.id === workId);
+      if (!item) return;
+
+      setWorkItemStatusWithTracking(item, newStatus);
+
+      saveState();
+      renderWorkItems();
+      renderDashboard();
+      renderLeadership();
+      refreshOpenWorkItemDetail();
+    }
+
+    function addEpicStep(e){
+      e.preventDefault();
+      normalizeEpicStepOrder();
+
+    state.epicProject.steps.push({
+      id:uid('epic'),
+      name:document.getElementById('epicStepName').value.trim(),
+      status:document.getElementById('epicStepStatus').value,
+      phase:document.getElementById('epicStepPhase').value.trim(),
+      owner:document.getElementById('epicStepOwner').value.trim(),
+      blockedReason:document.getElementById('epicStepBlocked').value.trim(),
+      notes:document.getElementById('epicStepNotes').value.trim(),
+      order: state.epicProject.steps.length + 1,
+      statusChangedAt:new Date().toISOString(),
+      completedAt:'',
+      blockedAt:'',
+      createdAt:new Date().toISOString()
+    });
+
+      saveState();
+      closeEpicStepModal();
+      render();
+    }
+
+    function setEpicStepStatusWithTracking(step, newStatus){
+      if (!step) return;
+
+      const oldStatus = step.status;
+      const now = new Date().toISOString();
+
+      if (oldStatus !== newStatus){
+        step.status = newStatus;
+        step.statusChangedAt = now;
+      }
+
+      if (newStatus === 'Done'){
+        step.completedAt = now;
+        step.blockedAt = '';
+      } else {
+        if (oldStatus === 'Done' && step.completedAt){
+          step.completedAt = '';
+        }
+
+        if (newStatus === 'Blocked'){
+          if (!step.blockedAt || oldStatus !== 'Blocked'){
+            step.blockedAt = now;
+          }
+        } else {
+          step.blockedAt = '';
+        }
+      }
+    }
+
+    function updateEpicField(id, field, value){
+      const step = state.epicProject.steps.find(s=>s.id===id);
+      if (!step) return;
+
+      if (field === 'status'){
+        setEpicStepStatusWithTracking(step, value);
+      } else {
+        step[field] = value;
+      }
+
+      saveState();
+      render();
+    }
+
+    function toggleEpicDone(id, checked){
+      const step = state.epicProject.steps.find(s=>s.id===id);
+      if (!step) return;
+
+      setEpicStepStatusWithTracking(step, checked ? 'Done' : 'Not Started');
+
+      saveState();
+      render();
+    }
+
+    function editEpicStepInline(id){
+        const step = state.epicProject.steps.find(s=>s.id===id);
+        if (!step) return;
+
+        const name = prompt('Step name:', step.name);
+        if (name === null) return;
+
+        const phase = prompt('Phase:', step.phase || '');
+        if (phase === null) return;
+
+        const notes = prompt('Notes:', step.notes || '');
+        if (notes === null) return;
+
+        const blocker = prompt('Blocked reason:', step.blockedReason || '');
+        if (blocker === null) return;
+
+        const completedDate = prompt(
+        'Completed date (YYYY-MM-DD). Leave blank to clear:',
+        step.completedAt ? dateInputValue(new Date(step.completedAt)) : ''
+        );
+        if (completedDate === null) return;
+
+        step.name = name.trim() || step.name;
+        step.phase = phase.trim();
+        step.notes = notes.trim();
+        step.blockedReason = blocker.trim();
+        step.completedAt = completedDate ? new Date(completedDate + 'T12:00:00').toISOString() : '';
+
+        saveState();
+        render();
+    }
+
+    function deleteEpicStep(id){
+      if (!confirm('Delete this project step?')) return;
+      state.epicProject.steps = state.epicProject.steps.filter(s=>s.id!==id);
+      normalizeEpicStepOrder();
+      saveState();
+      render();
+    }
+
+    function exportBackup(){
+      const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `work-command-center-backup-${dateInputValue(new Date())}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function importBackup(file){
+      const reader = new FileReader();
+      reader.onload = () => {
+        try{
+          const parsed = JSON.parse(reader.result);
+          if (!parsed.workItems || !parsed.calendarEntries || !parsed.epicProject) throw new Error();
+          Object.assign(state, parsed);
+          if (!state.reminderNotes) state.reminderNotes = [];
+          if (!state.workItemsStatusFilter) state.workItemsStatusFilter = 'active';
+          if (!state.workItemsTypeFilter) state.workItemsTypeFilter = 'all';
+
+          state.workItems.forEach(item => {
+            if (!item.children) item.children = [];
+            if (!item.history) item.history = [];
+
+            if (!item.createdAt) item.createdAt = new Date().toISOString();
+            if (!item.updatedAt) item.updatedAt = item.createdAt;
+            if (typeof item.completedAt === 'undefined') item.completedAt = '';
+            if (typeof item.statusChangedAt === 'undefined') item.statusChangedAt = item.updatedAt;
+            if (typeof item.blockedAt === 'undefined') item.blockedAt = '';
+
+            item.children.forEach((child, idx) => {
+              if (!child.id) child.id = uid('child');
+              if (typeof child.order !== 'number') child.order = idx + 1;
+              if (typeof child.completedAt === 'undefined') child.completedAt = '';
+            });
+
+            normalizeChildOrder(item);
+          });
+
+          state.calendarEntries.forEach(entry => {
+            if (typeof entry.childTaskId === 'undefined') entry.childTaskId = '';
+          });
+
+            if (!state.epicProject.steps) state.epicProject.steps = [];
+            state.epicProject.steps.forEach((step, idx) => {
+              if (typeof step.order !== 'number') step.order = idx + 1;
+              if (!step.createdAt) step.createdAt = new Date().toISOString();
+              if (typeof step.completedAt === 'undefined') step.completedAt = '';
+              if (typeof step.statusChangedAt === 'undefined') step.statusChangedAt = step.createdAt;
+              if (typeof step.blockedAt === 'undefined') step.blockedAt = '';
+            });
+            normalizeEpicStepOrder();
+
+          saveState();
+          render();
+        }catch{
+          alert('Could not import backup. Make sure it is a valid exported JSON file.');
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    function resetApp(){
+      if (!confirm('Reset the entire app and clear all local data?')) return;
+      localStorage.removeItem(STORAGE_KEY);
+      location.reload();
+    }
+
+    function toggleSettingsMenu(forceClose=false){
+      const menu = document.getElementById('settingsMenu');
+      if (forceClose){
+        menu.classList.remove('open');
+        return;
+      }
+      menu.classList.toggle('open');
+    }
+
+    function toggleCalendarExpanded(){
+      state.calendarExpanded = !state.calendarExpanded;
+      saveState();
+      renderDashboard();
+      renderLeadership();
+    }
+
+    function wireEvents(){
+      document.getElementById('seedDemoBtn').addEventListener('click', ()=>{ toggleSettingsMenu(true); seedDemoData(); });
+      document.getElementById('exportBtn').addEventListener('click', ()=>{ toggleSettingsMenu(true); exportBackup(); });
+      document.getElementById('importFile').addEventListener('change', e => e.target.files[0] && importBackup(e.target.files[0]));
+      document.getElementById('resetBtn').addEventListener('click', ()=>{ toggleSettingsMenu(true); resetApp(); });
+
+      document.getElementById('newWorkBtnA').addEventListener('click', ()=>{
+        state.activeTab = 'work-items';
+        saveState();
+        render();
+        openCreateWorkModal();
+      });
+
+      document.getElementById('openCreateWorkModalBtn').addEventListener('click', openCreateWorkModal);
+      document.getElementById('closeCreateWorkModalBtn').addEventListener('click', closeCreateWorkModal);
+      document.getElementById('cancelCreateWorkModalBtn').addEventListener('click', closeCreateWorkModal);
+      document.getElementById('createWorkModalForm').addEventListener('submit', createWorkItemFromModal);
+
+      document.getElementById('createWorkModalBackdrop').addEventListener('click', (e)=>{
+        if (e.target.id === 'createWorkModalBackdrop') closeCreateWorkModal();
+      });
+
+      document.getElementById('openEpicStepModalBtn').addEventListener('click', openEpicStepModal);
+      document.getElementById('closeEpicStepModalBtn').addEventListener('click', closeEpicStepModal);
+      document.getElementById('cancelEpicStepModalBtn').addEventListener('click', closeEpicStepModal);
+      document.getElementById('epicStepForm').addEventListener('submit', addEpicStep);
+
+      document.getElementById('epicStepModalBackdrop').addEventListener('click', (e)=>{
+        if (e.target.id === 'epicStepModalBackdrop') closeEpicStepModal();
+      });
+
+      document.getElementById('toggleCalendarViewBtn').addEventListener('click', toggleCalendarExpanded);
+
+      document.getElementById('calendarWeekPicker').addEventListener('change', goToSelectedWeek);
+      document.getElementById('currentWeekBtn').addEventListener('click', ()=>{
+        state.currentWeekOffset = 0;
+        saveState();
+        renderDashboard();
+        renderLeadership();
+      });
+
+      document.getElementById('closeDrawerBtn').addEventListener('click', closeDrawer);
+      document.getElementById('drawerBackdrop').addEventListener('click', closeDrawer);
+
+      document.getElementById('settingsBtn').addEventListener('click', (e)=>{
+        e.stopPropagation();
+        toggleSettingsMenu();
+      });
+
+      document.addEventListener('click', (e)=>{
+        const menu = document.getElementById('settingsMenu');
+        const btn = document.getElementById('settingsBtn');
+        if (!menu.contains(e.target) && !btn.contains(e.target)){
+          toggleSettingsMenu(true);
+        }
+      });
+    }
+
+    function render(){
+        document.getElementById('pageTitle').textContent = getPageTitle();
+
+        renderSideNav();
+        renderQuickFocus();
+        showView();
+        renderStatusOptions();
+        renderDashboard();
+        renderWorkItems();
+        renderEpicProject();
+        renderLeadership();
+    }
+
+    window.setWorkItemsStatusFilter = setWorkItemsStatusFilter;
+    window.setWorkItemsTypeFilter = setWorkItemsTypeFilter;
+    window.openCalendarDrawer = openCalendarDrawer;
+    window.openCalendarDrawerForWorkItem = openCalendarDrawerForWorkItem;
+    window.openCalendarDrawerForChildTask = openCalendarDrawerForChildTask;
+    window.saveCalendarDrawer = saveCalendarDrawer;
+    window.deleteCalendarEntry = deleteCalendarEntry;
+    window.openWorkItemDrawer = openWorkItemDrawer;
+    window.saveWorkItemDrawer = saveWorkItemDrawer;
+    window.toggleChildTask = toggleChildTask;
+    window.setChildTaskCompletedDate = setChildTaskCompletedDate;
+    window.saveNewWorkNote = saveNewWorkNote;
+    window.deleteWorkItem = deleteWorkItem;
+    window.setWorkItemStatus = setWorkItemStatus;
+    window.openWorkItemDetailPage = openWorkItemDetailPage;
+    window.closeWorkItemDetailPage = closeWorkItemDetailPage;
+    window.goToWorkItemDetail = goToWorkItemDetail;
+    window.toggleEpicDone = toggleEpicDone;
+    window.updateEpicField = updateEpicField;
+    window.editEpicStepInline = editEpicStepInline;
+    window.deleteEpicStep = deleteEpicStep;
+    window.addChildTask = addChildTask;
+    window.deleteChildTask = deleteChildTask;
+    window.addParentNote = addParentNote;
+    window.completeCalendarEntryChildTask = completeCalendarEntryChildTask;
+    window.addReminderNote = addReminderNote;
+    window.deleteReminderNote = deleteReminderNote;
+
+    wireEvents();
+    render();
+  </script>
+</body>
+</html>
